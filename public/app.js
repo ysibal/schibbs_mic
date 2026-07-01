@@ -170,6 +170,8 @@ function bindEvents() {
     navigator.mediaDevices.addEventListener("devicechange", refreshDevices);
   }
 
+  document.addEventListener("fullscreenchange", updateFullscreenButtons);
+
   dom.leaveVoiceButton.addEventListener("click", () => leaveVoice());
 
   window.addEventListener("beforeunload", () => {
@@ -1201,7 +1203,7 @@ function createParticipantTile(peer, options = {}) {
     video.playsInline = true;
     video.muted = isLocal;
     video.srcObject = videoStream;
-    tile.append(video);
+    tile.append(video, createFullscreenButton(tile, video));
   } else {
     const initial = document.createElement("div");
     initial.className = "participant-initial";
@@ -1225,6 +1227,59 @@ function createParticipantTile(peer, options = {}) {
   tile.append(label);
 
   return tile;
+}
+
+function createFullscreenButton(tile, video) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "tile-fullscreen-button";
+  button.setAttribute("aria-label", "view fullscreen");
+  button.title = "view fullscreen";
+  button.textContent = "fullscreen";
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleTileFullscreen(tile, video);
+  });
+  return button;
+}
+
+async function toggleTileFullscreen(tile, video) {
+  try {
+    if (document.fullscreenElement === tile) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+
+    if (tile.requestFullscreen) {
+      await tile.requestFullscreen();
+      return;
+    }
+
+    if (video.webkitEnterFullscreen) {
+      video.webkitEnterFullscreen();
+      return;
+    }
+
+    showToast("fullscreen is not supported in this browser.");
+  } catch (error) {
+    showToast("could not open fullscreen.");
+  } finally {
+    updateFullscreenButtons();
+  }
+}
+
+function updateFullscreenButtons() {
+  for (const button of document.querySelectorAll(".tile-fullscreen-button")) {
+    const tile = button.closest(".participant-tile");
+    const isActive = document.fullscreenElement === tile;
+    button.textContent = isActive ? "exit" : "fullscreen";
+    button.title = isActive ? "exit fullscreen" : "view fullscreen";
+    button.setAttribute("aria-label", button.title);
+  }
 }
 
 function getTileLabel(peer, mode) {
