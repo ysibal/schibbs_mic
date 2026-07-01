@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=11">
+    <link rel="stylesheet" href="/styles.css?v=12">
   </head>
   <body>
     <section id="landingScreen" class="landing-screen" aria-label="room entry">
@@ -88,6 +88,23 @@
             <span id="connectionStatus" class="status-pill">offline</span>
           </div>
         </header>
+        <div class="app-theme-strip" aria-label="color themes">
+          <button class="app-theme-button color-theme-button" type="button" data-palette="brown" aria-label="brown theme" title="brown" aria-pressed="true">
+            <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+          </button>
+          <button class="app-theme-button color-theme-button" type="button" data-palette="rose" aria-label="rose theme" title="rose" aria-pressed="false">
+            <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+          </button>
+          <button class="app-theme-button color-theme-button" type="button" data-palette="olive" aria-label="olive theme" title="olive" aria-pressed="false">
+            <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+          </button>
+          <button class="app-theme-button color-theme-button" type="button" data-palette="ocean" aria-label="ocean theme" title="ocean" aria-pressed="false">
+            <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+          </button>
+          <button class="app-theme-button color-theme-button" type="button" data-palette="graphite" aria-label="graphite theme" title="graphite" aria-pressed="false">
+            <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+          </button>
+        </div>
         <div id="channelList" class="channel-list"></div>
         <footer class="profile-strip">
           <div class="avatar" id="profileAvatar">g</div>

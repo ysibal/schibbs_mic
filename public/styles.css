@@ -620,6 +620,31 @@ button:disabled {
   box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
+.app-theme-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 28%, transparent);
+}
+
+.app-theme-button {
+  min-height: 30px;
+  padding: 5px;
+  gap: 0;
+}
+
+.app-theme-button .color-theme-swatch span {
+  width: 13px;
+  height: 13px;
+}
+
+.app-theme-button:hover,
+.app-theme-button.is-active {
+  transform: none;
+}
+
 .channel-list {
   flex: 1;
   min-height: 0;
@@ -1425,6 +1450,10 @@ body * {
   .channel-pane {
     min-height: 260px;
     border-bottom: 1px solid var(--line);
+  }
+
+  .app-theme-strip {
+    padding: 8px 10px;
   }
 
   .main-pane {
