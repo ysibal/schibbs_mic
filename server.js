@@ -6,6 +6,7 @@ const { URL } = require("url");
 
 const PUBLIC_DIR = path.join(__dirname, "public");
 const DEFAULT_PORT = Number(process.env.PORT || 3000);
+const DEFAULT_HOST = process.env.HOST || "0.0.0.0";
 const MAX_BODY_BYTES = 1024 * 128;
 
 const appState = {
@@ -585,16 +586,20 @@ function normalizeText(value, maxLength) {
 
 function startServer(options = {}) {
   const port = options.port ?? DEFAULT_PORT;
-  const host = options.host || "127.0.0.1";
+  const host = options.host || DEFAULT_HOST;
   const server = createServer();
 
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {
       const address = server.address();
-      const url = `http://${address.address === "::" ? "127.0.0.1" : address.address}:${address.port}`;
+      const displayHost =
+        address.address === "::" || address.address === "0.0.0.0"
+          ? "127.0.0.1"
+          : address.address;
+      const url = `http://${displayHost}:${address.port}`;
       if (!options.silent) {
-        console.log(`schibb's mic is running at ${url}`);
+        console.log(`schibb's mic is running at ${url} (${address.address})`);
       }
       resolve({ server, url, port: address.port });
     });
