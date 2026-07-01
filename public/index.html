@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=10">
+    <link rel="stylesheet" href="/styles.css?v=11">
   </head>
   <body>
     <section id="landingScreen" class="landing-screen" aria-label="room entry">
@@ -35,6 +35,34 @@
             <span>create or join room</span>
           </button>
         </form>
+
+        <section class="color-theme-card" aria-label="color themes">
+          <div class="color-theme-heading">
+            <h2>color theme</h2>
+          </div>
+          <div class="color-theme-options">
+            <button class="color-theme-button" type="button" data-palette="brown" aria-pressed="true">
+              <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+              <span>brown</span>
+            </button>
+            <button class="color-theme-button" type="button" data-palette="rose" aria-pressed="false">
+              <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+              <span>rose</span>
+            </button>
+            <button class="color-theme-button" type="button" data-palette="olive" aria-pressed="false">
+              <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+              <span>olive</span>
+            </button>
+            <button class="color-theme-button" type="button" data-palette="ocean" aria-pressed="false">
+              <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+              <span>ocean</span>
+            </button>
+            <button class="color-theme-button" type="button" data-palette="graphite" aria-pressed="false">
+              <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
+              <span>graphite</span>
+            </button>
+          </div>
+        </section>
 
         <section class="active-rooms-card" aria-label="active rooms">
           <div class="active-rooms-heading">
@@ -172,6 +200,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/app.js?v=11" type="module"></script>
+    <script src="/app.js?v=12" type="module"></script>
   </body>
 </html>

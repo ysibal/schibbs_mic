@@ -47,6 +47,8 @@ const rtcConfig = {
   ]
 };
 
+const colorPalettes = new Set(["brown", "rose", "olive", "ocean", "graphite"]);
+
 const dom = {
   landingScreen: document.querySelector("#landingScreen"),
   appShell: document.querySelector("#appShell"),
@@ -54,6 +56,8 @@ const dom = {
   entryName: document.querySelector("#entryName"),
   entryRoom: document.querySelector("#entryRoom"),
   activeRoomsList: document.querySelector("#activeRoomsList"),
+  paletteButtons: [...document.querySelectorAll("[data-palette]")],
+  themeMeta: document.querySelector("meta[name=\"theme-color\"]"),
   themeToggle: document.querySelector("#themeToggle"),
   themeToggleApp: document.querySelector("#themeToggleApp"),
   mainPane: document.querySelector(".main-pane"),
@@ -111,6 +115,11 @@ function bindEvents() {
   dom.editProfileButton.addEventListener("click", returnToLobby);
   dom.themeToggle.addEventListener("click", toggleTheme);
   dom.themeToggleApp.addEventListener("click", toggleTheme);
+  for (const button of dom.paletteButtons) {
+    button.addEventListener("click", () => {
+      applyPalette(button.dataset.palette);
+    });
+  }
   dom.chatTabButton.addEventListener("click", () => {
     setChatOpen(!app.chatOpen);
   });
@@ -325,7 +334,10 @@ function mergeRoom(rooms, room) {
 function initTheme() {
   const savedTheme = localStorage.getItem("schibbs-mic-theme");
   const theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "dark";
+  const savedPalette = localStorage.getItem("schibbs-mic-palette");
+  const palette = colorPalettes.has(savedPalette) ? savedPalette : "brown";
   applyTheme(theme);
+  applyPalette(palette);
 }
 
 function toggleTheme() {
@@ -346,6 +358,29 @@ function applyTheme(theme) {
       label.textContent = nextLabel;
     }
     button.title = `switch to ${nextLabel} mode`;
+  }
+  updateThemeColor();
+}
+
+function applyPalette(palette) {
+  const nextPalette = colorPalettes.has(palette) ? palette : "brown";
+  document.documentElement.dataset.palette = nextPalette;
+  localStorage.setItem("schibbs-mic-palette", nextPalette);
+  for (const button of dom.paletteButtons) {
+    const isActive = button.dataset.palette === nextPalette;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  }
+  updateThemeColor();
+}
+
+function updateThemeColor() {
+  if (!dom.themeMeta) {
+    return;
+  }
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  if (bg) {
+    dom.themeMeta.setAttribute("content", bg);
   }
 }
 

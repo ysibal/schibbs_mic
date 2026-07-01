@@ -1,9 +1,9 @@
-const CACHE_NAME = "schibbs-mic-shell-v14";
+const CACHE_NAME = "schibbs-mic-shell-v15";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?v=10",
-  "/app.js?v=11",
+  "/styles.css?v=11",
+  "/app.js?v=12",
   "/manifest.webmanifest",
   "/icon.svg"
 ];
