@@ -149,7 +149,7 @@ async function enterRoom(roomName) {
   const requestedRoom = String(roomName || "").trim();
 
   if (!name || !requestedRoom) {
-    showToast("İsim ve oda adı gerekli.");
+    showToast("name and room are required.");
     return;
   }
 
@@ -194,7 +194,7 @@ async function returnToLobby() {
   setChatOpen(false);
   dom.entryName.value = "";
   dom.entryRoom.value = "";
-  setConnectionStatus("Offline", false);
+  setConnectionStatus("offline", false);
   await bootstrap();
   showLanding();
   renderLandingRooms();
@@ -228,7 +228,7 @@ async function refreshLobbyRooms() {
     app.rooms = data.rooms || [];
     renderLandingRooms();
   } catch (error) {
-    console.warn("Could not refresh rooms", error);
+    console.warn("could not refresh rooms", error);
   }
 }
 
@@ -238,7 +238,7 @@ function renderLandingRooms() {
   if (app.rooms.length === 0) {
     const empty = document.createElement("p");
     empty.className = "active-rooms-empty";
-    empty.textContent = "Aktif oda yok.";
+    empty.textContent = "no active rooms.";
     dom.activeRoomsList.append(empty);
     return;
   }
@@ -266,12 +266,12 @@ function renderLandingRooms() {
     const title = document.createElement("strong");
     title.textContent = room.name;
     const meta = document.createElement("span");
-    meta.textContent = `${room.memberCount || 0} kişi · ${room.voiceCount || 0} seste`;
+    meta.textContent = `${room.memberCount || 0} users · ${room.voiceCount || 0} in voice`;
     copy.append(title, meta);
 
     const action = document.createElement("span");
     action.className = "active-room-action";
-    action.textContent = "Katıl";
+    action.textContent = "join";
 
     button.append(avatar, copy, action);
     dom.activeRoomsList.append(button);
@@ -307,7 +307,7 @@ function applyTheme(theme) {
     if (label) {
       label.textContent = nextLabel;
     }
-    button.title = `Switch to ${nextLabel} mode`;
+    button.title = `switch to ${nextLabel} mode`;
   }
 }
 
@@ -323,10 +323,10 @@ function connectEvents() {
   });
   const source = new EventSource(`/api/events?${params.toString()}`);
   app.eventSource = source;
-  setConnectionStatus("Connecting", false);
+  setConnectionStatus("connecting", false);
 
   source.addEventListener("open", () => {
-    setConnectionStatus("Live", true);
+    setConnectionStatus("live", true);
   });
 
   source.addEventListener("hello", (event) => {
@@ -381,7 +381,7 @@ function connectEvents() {
   });
 
   source.addEventListener("error", () => {
-    setConnectionStatus("Reconnecting", false);
+    setConnectionStatus("reconnecting", false);
   });
 }
 
@@ -420,7 +420,7 @@ async function joinVoice(roomId) {
   }
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    showToast("Voice requires a browser with microphone support.");
+    showToast("voice requires a browser with microphone support.");
     return;
   }
 
@@ -438,7 +438,7 @@ async function joinVoice(roomId) {
       video: false
     });
   } catch (error) {
-    showToast("Microphone permission was not granted.");
+    showToast("microphone permission was not granted.");
     return;
   }
 
@@ -463,7 +463,7 @@ async function joinVoice(roomId) {
     stopStream(app.micStream);
     app.micStream = null;
     app.currentVoiceId = "";
-    showToast("Could not join the voice room.");
+    showToast("could not join the voice room.");
     render();
   }
 }
@@ -494,19 +494,19 @@ async function leaveVoice(options = {}) {
   }
 
   if (wasInVoice && !options.keepNoticeQuiet) {
-    showToast("Left voice room.");
+    showToast("left voice room.");
   }
   render();
 }
 
 async function startCamera() {
   if (!app.currentVoiceId) {
-    showToast("Join a voice room before turning on your camera.");
+    showToast("join a voice room before turning on your camera.");
     return;
   }
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    showToast("Camera requires a browser with camera support.");
+    showToast("camera requires a browser with camera support.");
     return;
   }
 
@@ -521,7 +521,7 @@ async function startCamera() {
       }
     });
   } catch (error) {
-    showToast("Camera permission was not granted.");
+    showToast("camera permission was not granted.");
     return;
   }
 
@@ -565,12 +565,12 @@ function stopCamera() {
 
 async function startScreenShare() {
   if (!app.currentVoiceId) {
-    showToast("Join a voice room before sharing your screen.");
+    showToast("join a voice room before sharing your screen.");
     return;
   }
 
   if (!navigator.mediaDevices?.getDisplayMedia) {
-    showToast("Screen sharing is not supported in this browser.");
+    showToast("screen sharing is not supported in this browser.");
     return;
   }
 
@@ -584,7 +584,7 @@ async function startScreenShare() {
       audio: false
     });
   } catch (error) {
-    showToast("Screen share was cancelled.");
+    showToast("screen share was cancelled.");
     return;
   }
 
@@ -704,7 +704,7 @@ async function ensurePeer(peerId) {
       await pc.setLocalDescription();
       await sendSignal(peerId, { description: pc.localDescription });
     } catch (error) {
-      console.warn("Negotiation failed", error);
+      console.warn("negotiation failed", error);
     } finally {
       peer.makingOffer = false;
     }
@@ -789,7 +789,7 @@ async function handleSignal(payload) {
       }
     }
   } catch (error) {
-    console.warn("Signal handling failed", error);
+    console.warn("signal handling failed", error);
   }
 }
 
@@ -903,20 +903,20 @@ async function selectTextChannel(channelId) {
 }
 
 function renderProfile() {
-  dom.profileName.textContent = app.name || "Guest";
-  dom.profileAvatar.textContent = getInitials(app.name || "Guest");
+  dom.profileName.textContent = app.name || "guest";
+  dom.profileAvatar.textContent = getInitials(app.name || "guest");
   dom.profileStatus.textContent = app.cameraStream
-    ? "Camera on"
+    ? "camera on"
     : app.currentVoiceId
-      ? "In voice"
-      : "Ready";
+      ? "in voice"
+      : "ready";
 }
 
 function renderChatHeader() {
   const channel = getChannel(app.currentChannelId, "text");
   dom.chatTitle.textContent = channel ? `# ${channel.name}` : "# channel";
   dom.chatTopic.textContent = channel?.topic || "";
-  dom.messageInput.placeholder = channel ? `Message #${channel.name}` : "Message";
+  dom.messageInput.placeholder = channel ? `message #${channel.name}` : "message";
 }
 
 function renderMessages() {
@@ -963,26 +963,26 @@ function renderVoiceControls() {
   const room = getChannel(app.currentVoiceId, "voice");
   const muteLabel = dom.muteButton.querySelector(".button-label");
   const muteHelper = dom.muteButton.querySelector(".button-helper");
-  dom.voiceTitle.textContent = room ? room.name : "No room joined";
+  dom.voiceTitle.textContent = room ? room.name : "no room joined";
   dom.muteButton.disabled = !inVoice;
   dom.muteButton.classList.toggle("is-muted", app.muted);
   dom.muteButton.setAttribute("aria-pressed", String(app.muted));
   dom.muteButton.title = app.muted
-    ? "Microphone muted. Click to unmute."
-    : "Microphone on. Click to mute.";
+    ? "microphone muted. click to unmute."
+    : "microphone on. click to mute.";
   dom.cameraButton.disabled = !inVoice;
   dom.shareButton.disabled = !inVoice;
   dom.leaveVoiceButton.disabled = !inVoice;
   dom.cameraButton.classList.toggle("is-active", Boolean(app.cameraStream));
   dom.shareButton.classList.toggle("is-active", Boolean(app.screenStream));
-  muteLabel.textContent = app.muted ? "Unmute mic" : "Mute mic";
+  muteLabel.textContent = app.muted ? "unmute mic" : "mute mic";
   muteHelper.textContent = app.muted ? "mic is off" : "mic is on";
   dom.cameraButton.querySelector("span:last-child").textContent = app.cameraStream
-    ? "Stop camera"
-    : "Camera";
+    ? "stop camera"
+    : "camera";
   dom.shareButton.querySelector("span:last-child").textContent = app.screenStream
-    ? "Stop share"
-    : "Share 1080p";
+    ? "stop share"
+    : "share 1080p";
 }
 
 function setChatOpen(isOpen) {
@@ -1004,14 +1004,14 @@ function renderVoiceStage() {
   if (!app.currentVoiceId) {
     const empty = document.createElement("div");
     empty.className = "stage-empty";
-    empty.textContent = "Join a voice room";
+    empty.textContent = "join a voice room";
     dom.stageGrid.append(empty);
     return;
   }
 
   const localPeer = {
     clientId: app.clientId,
-    name: `${app.name || "You"} (you)`
+    name: `${app.name || "you"} (you)`
   };
 
   if (app.screenStream || app.cameraStream) {
@@ -1126,7 +1126,7 @@ function renderMembers() {
     const name = document.createElement("strong");
     name.textContent = user.clientId === app.clientId ? `${user.name} (you)` : user.name;
     const status = document.createElement("span");
-    status.textContent = getUserVoiceRoomName(user.clientId) || "Online";
+    status.textContent = getUserVoiceRoomName(user.clientId) || "online";
     copy.append(name, status);
     row.append(copy);
     dom.memberList.append(row);
@@ -1164,20 +1164,20 @@ function getCurrentVoicePeers() {
 function getUserVoiceRoomName(clientId) {
   for (const [roomId, peers] of Object.entries(app.voiceRooms)) {
     if (peers.some((peer) => peer.clientId === clientId)) {
-      return getChannel(roomId, "voice")?.name || "In voice";
+      return getChannel(roomId, "voice")?.name || "in voice";
     }
   }
   return "";
 }
 
 function getInitials(name) {
-  const parts = String(name || "Guest")
+  const parts = String(name || "guest")
     .replace(/\(you\)/g, "")
     .trim()
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2);
-  return (parts.map((part) => part[0]).join("") || "G").toUpperCase();
+  return (parts.map((part) => part[0]).join("") || "g").toLowerCase();
 }
 
 function formatTime(value) {
@@ -1198,7 +1198,7 @@ function parseEvent(event) {
 async function fetchJson(url) {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    throw new Error(`request failed: ${response.status}`);
   }
   return response.json();
 }
@@ -1210,7 +1210,7 @@ async function postJson(url, payload) {
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    throw new Error(`request failed: ${response.status}`);
   }
   return response.json();
 }

@@ -7,37 +7,38 @@
     <title>schibb's mic</title>
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css?v=8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css?v=9">
   </head>
   <body>
-    <section id="landingScreen" class="landing-screen" aria-label="Room entry">
-      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+    <section id="landingScreen" class="landing-screen" aria-label="room entry">
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="toggle theme">
         <span aria-hidden="true">◐</span>
         <span>light</span>
       </button>
       <div class="landing-content">
         <div class="lobby-hero">
           <h1 class="brand-name">schibb's mic</h1>
-          <p class="lobby-subtitle">Arkadaşlarınla konuş, kamera aç ve ekran paylaş.</p>
-          <p class="lobby-caption">Odaya gir, arkadaşın gelsin, sohbet başlasın.</p>
         </div>
 
         <form id="roomEntryForm" class="room-entry-card">
-          <label for="entryName">İsim</label>
-          <input id="entryName" name="name" type="text" maxlength="32" autocomplete="off" placeholder="User 0" required>
+          <label for="entryName">name</label>
+          <input id="entryName" name="name" type="text" maxlength="32" autocomplete="off" placeholder="user 0" required>
 
-          <label for="entryRoom">Oda Adı</label>
-          <input id="entryRoom" name="room" type="text" maxlength="48" autocomplete="off" placeholder="Room 1" required>
+          <label for="entryRoom">room name</label>
+          <input id="entryRoom" name="room" type="text" maxlength="48" autocomplete="off" placeholder="room 1" required>
 
           <button type="submit" class="join-room-button">
             <span aria-hidden="true">+</span>
-            <span>Oda oluştur/katıl</span>
+            <span>create or join room</span>
           </button>
         </form>
 
-        <section class="active-rooms-card" aria-label="Active rooms">
+        <section class="active-rooms-card" aria-label="active rooms">
           <div class="active-rooms-heading">
-            <h2>Aktif Odalar</h2>
+            <h2>active rooms</h2>
           </div>
           <div id="activeRoomsList" class="active-rooms-list"></div>
         </section>
@@ -52,32 +53,32 @@
             <h1 id="workspaceName">room</h1>
           </div>
           <div class="header-actions">
-            <button id="themeToggleApp" class="theme-toggle compact" type="button" aria-label="Toggle theme">
+            <button id="themeToggleApp" class="theme-toggle compact" type="button" aria-label="toggle theme">
               <span aria-hidden="true">◐</span>
               <span>light</span>
             </button>
-            <span id="connectionStatus" class="status-pill">Offline</span>
+            <span id="connectionStatus" class="status-pill">offline</span>
           </div>
         </header>
         <div id="channelList" class="channel-list"></div>
         <footer class="profile-strip">
-          <div class="avatar" id="profileAvatar">G</div>
+          <div class="avatar" id="profileAvatar">g</div>
           <div class="profile-copy">
-            <strong id="profileName">Guest</strong>
-            <span id="profileStatus">Ready</span>
+            <strong id="profileName">guest</strong>
+            <span id="profileStatus">ready</span>
           </div>
-          <button id="editProfileButton" class="icon-button" type="button" aria-label="Change room" title="Change room">
+          <button id="editProfileButton" class="icon-button" type="button" aria-label="change room" title="change room">
             <span aria-hidden="true">...</span>
           </button>
         </footer>
       </aside>
 
       <main class="main-pane">
-        <section class="call-panel" aria-label="Voice room">
+        <section class="call-panel" aria-label="voice room">
           <header class="call-header">
             <div>
-              <p class="overline">Voice</p>
-              <h2 id="voiceTitle">No room joined</h2>
+              <p class="overline">voice</p>
+              <h2 id="voiceTitle">no room joined</h2>
             </div>
             <div class="call-actions">
               <button id="muteButton" class="tool-button mic-toggle" type="button" aria-pressed="false" disabled>
@@ -85,21 +86,21 @@
                   <span class="mic-slash"></span>
                 </span>
                 <span class="button-copy">
-                  <span class="button-label">Mute mic</span>
+                  <span class="button-label">mute mic</span>
                   <span class="button-helper">mic is on</span>
                 </span>
               </button>
               <button id="cameraButton" class="tool-button" type="button" disabled>
                 <span aria-hidden="true" class="tool-icon camera-icon"></span>
-                <span>Camera</span>
+                <span>camera</span>
               </button>
               <button id="shareButton" class="tool-button accent" type="button" disabled>
                 <span aria-hidden="true" class="tool-icon screen-icon"></span>
-                <span>Share 1080p</span>
+                <span>share 1080p</span>
               </button>
               <button id="leaveVoiceButton" class="tool-button danger" type="button" disabled>
                 <span aria-hidden="true" class="tool-icon leave-icon"></span>
-                <span>Leave</span>
+                <span>leave</span>
               </button>
             </div>
           </header>
@@ -108,33 +109,33 @@
 
         <button id="chatTabButton" class="chat-tab-button" type="button" aria-controls="chatPanel" aria-expanded="false">
           <span aria-hidden="true">#</span>
-          <span>Text</span>
+          <span>text</span>
         </button>
 
-        <section id="chatPanel" class="chat-panel" aria-label="Text channel" aria-hidden="true">
+        <section id="chatPanel" class="chat-panel" aria-label="text channel" aria-hidden="true">
           <header class="chat-header">
             <div>
-              <p class="overline">Text Channel</p>
+              <p class="overline">text channel</p>
               <h2 id="chatTitle"># lobby</h2>
-              <span id="chatTopic">General conversation</span>
+              <span id="chatTopic">general conversation</span>
             </div>
-            <button id="closeChatButton" class="icon-button chat-close-button" type="button" aria-label="Close text channel" title="Close text channel">
+            <button id="closeChatButton" class="icon-button chat-close-button" type="button" aria-label="close text channel" title="close text channel">
               <span aria-hidden="true">×</span>
             </button>
           </header>
           <div id="messageList" class="message-list" aria-live="polite"></div>
           <form id="messageForm" class="message-form">
-            <input id="messageInput" name="message" type="text" autocomplete="off" maxlength="4000" placeholder="Message #lobby">
-            <button type="submit" class="send-button" aria-label="Send message" title="Send message">
-              <span aria-hidden="true">Send</span>
+            <input id="messageInput" name="message" type="text" autocomplete="off" maxlength="4000" placeholder="message #lobby">
+            <button type="submit" class="send-button" aria-label="send message" title="send message">
+              <span aria-hidden="true">send</span>
             </button>
           </form>
         </section>
       </main>
 
-      <aside class="member-pane" aria-label="Members">
+      <aside class="member-pane" aria-label="members">
         <header class="member-header">
-          <p class="overline">Online</p>
+          <p class="overline">online</p>
           <h2 id="memberCount">0 members</h2>
         </header>
         <div id="memberList" class="member-list"></div>
@@ -143,6 +144,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/app.js?v=9" type="module"></script>
+    <script src="/app.js?v=10" type="module"></script>
   </body>
 </html>

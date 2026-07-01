@@ -1,4 +1,4 @@
 module.exports = {
-  // Paste your deployed Render URL here before building the Windows installer.
+  // paste your deployed render url here before building the windows installer.
   hostedAppUrl: ""
 };

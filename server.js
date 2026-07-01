@@ -57,7 +57,7 @@ function createServer() {
         };
 
         if (!channelExists(channelId, "text") || !message.text) {
-          sendJson(res, { error: "Invalid message" }, 400);
+          sendJson(res, { error: "invalid message" }, 400);
           return;
         }
 
@@ -76,7 +76,7 @@ function createServer() {
         const roomName = normalizeRoomName(body.roomName);
 
         if (!clientId || !roomName) {
-          sendJson(res, { error: "Invalid room request" }, 400);
+          sendJson(res, { error: "invalid room request" }, 400);
           return;
         }
 
@@ -113,7 +113,7 @@ function createServer() {
         const roomId = normalizeId(body.roomId);
 
         if (!clientId || !channelExists(roomId, "voice")) {
-          sendJson(res, { error: "Invalid voice room" }, 400);
+          sendJson(res, { error: "invalid voice room" }, 400);
           return;
         }
 
@@ -153,7 +153,7 @@ function createServer() {
         };
 
         if (!payload.from || !payload.to || !payload.roomId) {
-          sendJson(res, { error: "Invalid signal" }, 400);
+          sendJson(res, { error: "invalid signal" }, 400);
           return;
         }
 
@@ -172,7 +172,7 @@ function createServer() {
         };
 
         if (!payload.clientId || !payload.roomId) {
-          sendJson(res, { error: "Invalid screen state" }, 400);
+          sendJson(res, { error: "invalid screen state" }, 400);
           return;
         }
 
@@ -191,7 +191,7 @@ function createServer() {
     } catch (error) {
       console.error(error);
       if (!res.headersSent) {
-        sendJson(res, { error: "Internal server error" }, 500);
+        sendJson(res, { error: "internal server error" }, 500);
       } else {
         res.end();
       }
@@ -205,7 +205,7 @@ function handleEventStream(req, res, requestUrl) {
   const roomId = normalizeId(requestUrl.searchParams.get("roomId"));
 
   if (!clientId) {
-    sendJson(res, { error: "Missing clientId" }, 400);
+    sendJson(res, { error: "missing client id" }, 400);
     return;
   }
 
@@ -368,7 +368,7 @@ function getOrCreateRoom(roomName, createdBy) {
       channelId: room.textChannelId,
       authorId: "system",
       authorName: "schibb's mic",
-      text: `Welcome to ${room.name}. Use the room chat, join voice, turn on camera, or share your screen.`,
+      text: `${room.name} is open.`,
       createdAt: now
     }
   ]);
@@ -400,25 +400,25 @@ function roomToServer(room) {
     sections: [
       {
         id: `${room.id}-text`,
-        name: "Text Channel",
+        name: "text channel",
         type: "text",
         channels: [
           {
             id: room.textChannelId,
             name: room.name,
-            topic: `Room chat for ${room.name}`
+            topic: `room chat for ${room.name}`
           }
         ]
       },
       {
         id: `${room.id}-voice`,
-        name: "Voice Room",
+        name: "voice room",
         type: "voice",
         channels: [
           {
             id: room.voiceChannelId,
             name: room.name,
-            bitrate: "Opus + WebRTC media"
+            bitrate: "opus + webrtc media"
           }
         ]
       }
@@ -472,19 +472,19 @@ function createRoomId(roomName) {
 }
 
 function getInitials(name) {
-  return String(name || "SM")
+  return String(name || "sm")
     .trim()
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
-    .toUpperCase() || "SM";
+    .toLowerCase() || "sm";
 }
 
 function serveStatic(req, res, requestUrl) {
   if (req.method !== "GET" && req.method !== "HEAD") {
-    sendJson(res, { error: "Not found" }, 404);
+    sendJson(res, { error: "not found" }, 404);
     return;
   }
 
@@ -493,7 +493,7 @@ function serveStatic(req, res, requestUrl) {
   const filePath = path.normalize(path.join(PUBLIC_DIR, decodedPath));
 
   if (!filePath.startsWith(PUBLIC_DIR)) {
-    sendJson(res, { error: "Forbidden" }, 403);
+    sendJson(res, { error: "forbidden" }, 403);
     return;
   }
 
@@ -501,7 +501,7 @@ function serveStatic(req, res, requestUrl) {
     if (error) {
       fs.readFile(path.join(PUBLIC_DIR, "index.html"), (fallbackError, fallback) => {
         if (fallbackError) {
-          sendJson(res, { error: "Not found" }, 404);
+          sendJson(res, { error: "not found" }, 404);
           return;
         }
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -538,7 +538,7 @@ function readJson(req) {
     req.on("data", (chunk) => {
       body += chunk;
       if (body.length > MAX_BODY_BYTES) {
-        reject(new Error("Request body too large"));
+        reject(new Error("request body too large"));
         req.destroy();
       }
     });
@@ -573,7 +573,7 @@ function normalizeId(value) {
 
 function normalizeDisplayName(value) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
-  return text.slice(0, 32) || "Guest";
+  return text.slice(0, 32) || "guest";
 }
 
 function normalizeRoomName(value) {

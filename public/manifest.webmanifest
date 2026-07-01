@@ -1,7 +1,7 @@
 {
   "name": "schibb's mic",
   "short_name": "schibb's mic",
-  "description": "Voice rooms, camera, text chat, and WebRTC screen sharing.",
+  "description": "voice rooms, camera, text chat, and webrtc screen sharing.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
