@@ -1,0 +1,19 @@
+{
+  "name": "schibb's mic",
+  "short_name": "schibb's mic",
+  "description": "Voice rooms, camera, text chat, and WebRTC screen sharing.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#20150f",
+  "theme_color": "#3b281b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
