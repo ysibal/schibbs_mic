@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=9">
+    <link rel="stylesheet" href="/styles.css?v=10">
   </head>
   <body>
     <section id="landingScreen" class="landing-screen" aria-label="room entry">
@@ -96,7 +96,7 @@
               </button>
               <button id="shareButton" class="tool-button accent" type="button" disabled>
                 <span aria-hidden="true" class="tool-icon screen-icon"></span>
-                <span>share 1080p</span>
+                <span>share screen</span>
               </button>
               <button id="leaveVoiceButton" class="tool-button danger" type="button" disabled>
                 <span aria-hidden="true" class="tool-icon leave-icon"></span>
@@ -104,6 +104,34 @@
               </button>
             </div>
           </header>
+          <section class="call-settings" aria-label="voice settings">
+            <div class="device-controls">
+              <label>
+                <span>microphone</span>
+                <select id="microphoneSelect" disabled>
+                  <option value="">default microphone</option>
+                </select>
+              </label>
+              <label>
+                <span>speaker</span>
+                <select id="speakerSelect" disabled>
+                  <option value="">default speaker</option>
+                </select>
+              </label>
+              <label>
+                <span>camera</span>
+                <select id="cameraSelect" disabled>
+                  <option value="">default camera</option>
+                </select>
+              </label>
+            </div>
+            <div class="call-indicators">
+              <span id="micStatus" class="call-pill">mic idle</span>
+              <span id="screenStatus" class="call-pill">screen idle</span>
+              <span id="qualityStatus" class="call-pill">quality idle</span>
+              <span id="networkStatus" class="call-pill">network idle</span>
+            </div>
+          </section>
           <div id="stageGrid" class="stage-grid"></div>
         </section>
 
@@ -144,6 +172,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/app.js?v=10" type="module"></script>
+    <script src="/app.js?v=11" type="module"></script>
   </body>
 </html>

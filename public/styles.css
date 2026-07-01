@@ -263,7 +263,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -546,6 +547,101 @@ button:disabled {
   font-size: 13px;
 }
 
+.call-settings {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 38%, transparent);
+}
+
+.device-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.device-controls label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.device-controls label span {
+  overflow: hidden;
+  color: var(--quiet);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-controls select {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg) 64%, transparent);
+  font-size: 12px;
+}
+
+.device-controls select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.device-controls select:disabled {
+  color: var(--quiet);
+  opacity: 0.62;
+}
+
+.call-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.call-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 48%, transparent);
+  font-size: 11px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.call-pill.is-good {
+  color: var(--bg);
+  border-color: transparent;
+  background: var(--accent-2);
+}
+
+.call-pill.is-fair {
+  color: var(--cream);
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  background: color-mix(in srgb, var(--accent) 72%, var(--panel));
+}
+
+.call-pill.is-poor {
+  color: var(--cream);
+  border-color: transparent;
+  background: var(--danger);
+}
+
+.call-pill.is-idle {
+  color: var(--quiet);
+}
+
 .mic-toggle {
   min-width: 118px;
   justify-content: flex-start;
@@ -765,6 +861,13 @@ button:disabled {
 
 .participant-tile.is-screen video {
   object-fit: contain;
+}
+
+@media (min-width: 900px) {
+  .participant-tile.is-screen {
+    grid-column: span 2;
+    min-height: 220px;
+  }
 }
 
 .participant-tile audio {
@@ -1127,6 +1230,19 @@ body * {
 
   .tool-button {
     flex: 1 1 120px;
+  }
+
+  .device-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .call-indicators {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .call-pill {
+    justify-content: center;
   }
 
   .stage-grid {
