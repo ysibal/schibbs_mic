@@ -1,0 +1,45 @@
+{
+  "name": "schibbs-mic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Discord-style browser and Windows desktop voice, camera, chat, room, and screen sharing app.",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "node server.js",
+    "desktop:dev": "electron electron/main.cjs",
+    "desktop:build:win": "electron-builder --win",
+    "check": "node --check server.js && node --check electron/main.cjs && node --check public/app.js && node --check public/service-worker.js"
+  },
+  "keywords": [
+    "chat",
+    "voice",
+    "camera",
+    "webrtc",
+    "screen-sharing",
+    "pwa",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.schibbsmic.desktop",
+    "productName": "schibb's mic",
+    "files": [
+      "server.js",
+      "public/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "directories": {
+      "buildResources": "public"
+    }
+  }
+}
