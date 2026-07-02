@@ -61,7 +61,17 @@ after the workflow finishes, open the releases page:
 https://github.com/ysibal/schibbs_mic/releases
 ```
 
-users can download `schibbs-mic-setup-0.1.0.exe`, run it, and use the desktop app. because the installer is not code-signed yet, windows may show a smartscreen warning the first time users run it.
+users can download `schibbs-mic-setup.exe` from the latest release, run it, and use the desktop app. versioned installers such as `schibbs-mic-setup-0.2.0.exe` are also attached to each release. because the installer is not code-signed yet, windows may show a smartscreen warning the first time users run it.
+
+there is also a simple hosted download page at:
+
+```text
+https://schibbs-mic.onrender.com/download.html
+```
+
+tagged releases upload the installer, `latest.yml`, and `.blockmap` files. the packaged windows app checks github releases for updates automatically and prompts the user when a new installer is ready. public user downloads and auto-updates require the github release assets to be publicly reachable.
+
+code signing is not enabled because it requires a real windows signing certificate. once you have a certificate, add the signing secrets to github actions and wire them into the electron-builder step.
 
 you can also test a hosted url without editing the config. this is for development only; set `hostedAppUrl` before building an installer for other users.
 
@@ -110,3 +120,5 @@ this version uses peer-to-peer webrtc mesh rooms, which is appropriate for small
 - https and secure deployment for browser media permissions.
 
 the client requests screen capture with `width <= 1920`, `height <= 1080`, and `frameRate <= 60`. the actual delivered quality still depends on the browser, operating system, capture source, cpu, and network conditions.
+
+appearance settings such as theme color, light or dark mode, and font choice are stored only in each user's browser or desktop app with `localStorage`. they do not require server-side user accounts or preference storage.

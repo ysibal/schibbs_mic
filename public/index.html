@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=14">
+    <link rel="stylesheet" href="/styles.css?v=15">
   </head>
   <body>
     <section id="landingScreen" class="landing-screen" aria-label="room entry">
@@ -64,6 +64,22 @@
           </div>
         </section>
 
+        <section class="appearance-card" aria-label="font">
+          <div class="appearance-heading">
+            <h2>font</h2>
+          </div>
+          <label class="font-picker" for="fontSelect">
+            <span>font style</span>
+            <select id="fontSelect" class="font-select">
+              <option value="noto-serif-display">noto serif display</option>
+              <option value="arial-narrow">arial narrow</option>
+              <option value="helvetica">helvetica</option>
+              <option value="cambria-math">cambria math</option>
+              <option value="monospace">monospace</option>
+            </select>
+          </label>
+        </section>
+
         <section class="active-rooms-card" aria-label="active rooms">
           <div class="active-rooms-heading">
             <h2>active rooms</h2>
@@ -104,6 +120,19 @@
           <button class="app-theme-button color-theme-button" type="button" data-palette="graphite" aria-label="graphite theme" title="graphite" aria-pressed="false">
             <span class="color-theme-swatch" aria-hidden="true"><span></span><span></span></span>
           </button>
+        </div>
+        <div class="app-preferences-strip" aria-label="appearance">
+          <label class="font-picker compact" for="fontSelectApp">
+            <span>font</span>
+            <select id="fontSelectApp" class="font-select">
+              <option value="noto-serif-display">noto serif display</option>
+              <option value="arial-narrow">arial narrow</option>
+              <option value="helvetica">helvetica</option>
+              <option value="cambria-math">cambria math</option>
+              <option value="monospace">monospace</option>
+            </select>
+          </label>
+          <button id="desktopUpdateStatus" class="desktop-update-status" type="button" hidden>updates idle</button>
         </div>
         <div id="channelList" class="channel-list"></div>
         <footer class="profile-strip">
@@ -232,6 +261,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/app.js?v=14" type="module"></script>
+    <script src="/app.js?v=15" type="module"></script>
   </body>
 </html>

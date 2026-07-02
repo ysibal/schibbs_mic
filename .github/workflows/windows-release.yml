@@ -34,17 +34,24 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: stage installer
+      - name: stage release assets
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release-assets
           Copy-Item "dist\*.exe" release-assets\
+          Copy-Item "dist\*.blockmap" release-assets\
+          Copy-Item "dist\latest.yml" release-assets\
+          $installer = Get-ChildItem release-assets -Filter "schibbs-mic-setup-*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "installer exe was not generated"
+          }
+          Copy-Item $installer.FullName "release-assets\schibbs-mic-setup.exe" -Force
 
       - name: upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: schibbs-mic-windows-installer
-          path: release-assets/*.exe
+          name: schibbs-mic-windows-release-assets
+          path: release-assets/*
           if-no-files-found: error
 
       - name: publish github release
@@ -57,11 +64,12 @@ jobs:
           $notes = @"
           windows installer for schibb's mic.
 
-          download the exe file, run it, and the desktop app will open https://schibbs-mic.onrender.com.
+          download schibbs-mic-setup.exe for the easiest install. the release also includes updater metadata for the desktop app.
           "@
+          $assets = Get-ChildItem release-assets -File | ForEach-Object { $_.FullName }
 
           if (gh release view $tag 2>$null) {
-            gh release upload $tag "release-assets\*.exe" --clobber
+            gh release upload $tag $assets --clobber
           } else {
-            gh release create $tag "release-assets\*.exe" --title "schibb's mic $tag" --notes $notes
+            gh release create $tag $assets --title "schibb's mic $tag" --notes $notes
           }

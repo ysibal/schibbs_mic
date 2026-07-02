@@ -41,7 +41,10 @@ const app = {
   },
   musicPlayerVideoId: "",
   musicPlayerLoaded: false,
-  pendingMusicState: null
+  pendingMusicState: null,
+  desktopInfo: null,
+  desktopUpdateStatus: null,
+  toastHistory: new Map()
 };
 
 const rtcConfig = {
@@ -52,6 +55,7 @@ const rtcConfig = {
 };
 
 const colorPalettes = new Set(["brown", "rose", "olive", "ocean", "graphite"]);
+const fontOptions = new Set(["noto-serif-display", "arial-narrow", "helvetica", "cambria-math", "monospace"]);
 
 const dom = {
   landingScreen: document.querySelector("#landingScreen"),
@@ -61,6 +65,7 @@ const dom = {
   entryRoom: document.querySelector("#entryRoom"),
   activeRoomsList: document.querySelector("#activeRoomsList"),
   paletteButtons: [...document.querySelectorAll("[data-palette]")],
+  fontSelects: [...document.querySelectorAll(".font-select")],
   themeMeta: document.querySelector("meta[name=\"theme-color\"]"),
   themeToggle: document.querySelector("#themeToggle"),
   themeToggleApp: document.querySelector("#themeToggleApp"),
@@ -101,6 +106,7 @@ const dom = {
   musicStopButton: document.querySelector("#musicStopButton"),
   musicPlayerShell: document.querySelector("#musicPlayerShell"),
   musicPlayer: document.querySelector("#musicPlayer"),
+  desktopUpdateStatus: document.querySelector("#desktopUpdateStatus"),
   memberCount: document.querySelector("#memberCount"),
   memberList: document.querySelector("#memberList"),
   toast: document.querySelector("#toast")
@@ -109,9 +115,14 @@ const dom = {
 init();
 
 async function init() {
-  initTheme();
+  initAppearance();
   bindEvents();
-  await bootstrap();
+  initDesktopBridge();
+  try {
+    await bootstrap();
+  } catch (error) {
+    showToast(getRequestErrorMessage(error, "could not connect to schibb's mic."));
+  }
   await refreshDevices();
   registerServiceWorker();
   showLanding();
@@ -132,6 +143,17 @@ function bindEvents() {
       applyPalette(button.dataset.palette);
     });
   }
+  for (const select of dom.fontSelects) {
+    select.addEventListener("change", () => {
+      applyFont(select.value);
+    });
+  }
+  dom.desktopUpdateStatus?.addEventListener("click", () => {
+    if (window.schibbsDesktop?.checkForUpdates) {
+      window.schibbsDesktop.checkForUpdates();
+      showToast("checking for desktop updates.");
+    }
+  });
   dom.chatTabButton.addEventListener("click", () => {
     setChatOpen(!app.chatOpen);
   });
@@ -225,11 +247,17 @@ async function enterRoom(roomName) {
     return;
   }
 
-  const response = await postJson("/api/rooms", {
-    clientId: app.clientId,
-    name,
-    roomName: requestedRoom
-  });
+  let response;
+  try {
+    response = await postJson("/api/rooms", {
+      clientId: app.clientId,
+      name,
+      roomName: requestedRoom
+    });
+  } catch (error) {
+    showToast(getRequestErrorMessage(error, "could not create or join the room."));
+    return;
+  }
 
   app.name = response.name || name;
   app.currentRoomId = response.room.id;
@@ -245,7 +273,11 @@ async function enterRoom(roomName) {
 
   await loadMessages(app.currentChannelId);
   connectEvents();
-  await updatePresence();
+  try {
+    await updatePresence();
+  } catch (error) {
+    showToast(getRequestErrorMessage(error, "presence could not be updated."));
+  }
   dom.landingScreen.hidden = true;
   dom.appShell.hidden = false;
   render();
@@ -268,7 +300,11 @@ async function returnToLobby() {
   dom.entryName.value = "";
   dom.entryRoom.value = "";
   setConnectionStatus("offline", false);
-  await bootstrap();
+  try {
+    await bootstrap();
+  } catch (error) {
+    showToast(getRequestErrorMessage(error, "could not refresh the lobby."));
+  }
   showLanding();
   renderLandingRooms();
 }
@@ -357,6 +393,11 @@ function mergeRoom(rooms, room) {
   return next.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function initAppearance() {
+  initTheme();
+  initFont();
+}
+
 function initTheme() {
   const savedTheme = localStorage.getItem("schibbs-mic-theme");
   const theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "dark";
@@ -364,6 +405,11 @@ function initTheme() {
   const palette = colorPalettes.has(savedPalette) ? savedPalette : "brown";
   applyTheme(theme);
   applyPalette(palette);
+}
+
+function initFont() {
+  const savedFont = localStorage.getItem("schibbs-mic-font");
+  applyFont(fontOptions.has(savedFont) ? savedFont : "noto-serif-display");
 }
 
 function toggleTheme() {
@@ -400,6 +446,15 @@ function applyPalette(palette) {
   updateThemeColor();
 }
 
+function applyFont(font) {
+  const nextFont = fontOptions.has(font) ? font : "noto-serif-display";
+  document.documentElement.dataset.font = nextFont;
+  localStorage.setItem("schibbs-mic-font", nextFont);
+  for (const select of dom.fontSelects) {
+    select.value = nextFont;
+  }
+}
+
 function updateThemeColor() {
   if (!dom.themeMeta) {
     return;
@@ -407,6 +462,57 @@ function updateThemeColor() {
   const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
   if (bg) {
     dom.themeMeta.setAttribute("content", bg);
+  }
+}
+
+async function initDesktopBridge() {
+  if (!window.schibbsDesktop?.getInfo) {
+    renderDesktopUpdateStatus();
+    return;
+  }
+
+  try {
+    app.desktopInfo = await window.schibbsDesktop.getInfo();
+    app.desktopUpdateStatus = app.desktopInfo.updateStatus || null;
+    renderDesktopUpdateStatus();
+  } catch (error) {
+    app.desktopInfo = null;
+    renderDesktopUpdateStatus();
+  }
+
+  window.schibbsDesktop.onUpdateStatus?.((status) => {
+    app.desktopUpdateStatus = status;
+    renderDesktopUpdateStatus();
+    if (status?.state === "ready") {
+      showToast("desktop update ready. restart to install.", { duration: 5200 });
+    }
+    if (status?.state === "error") {
+      showRateLimitedToast("desktop-update-error", status.detail || status.message || "update check failed.", 12000);
+    }
+  });
+}
+
+function renderDesktopUpdateStatus() {
+  if (!dom.desktopUpdateStatus) {
+    return;
+  }
+
+  if (!app.desktopInfo) {
+    dom.desktopUpdateStatus.hidden = true;
+    return;
+  }
+
+  const status = app.desktopUpdateStatus || app.desktopInfo.updateStatus || {};
+  dom.desktopUpdateStatus.hidden = false;
+  dom.desktopUpdateStatus.textContent = status.message || `desktop app ${app.desktopInfo.version || ""}`.trim();
+  dom.desktopUpdateStatus.title = status.detail || "click to check for updates";
+  dom.desktopUpdateStatus.classList.remove("is-good", "is-active", "is-error");
+  if (status.state === "current") {
+    dom.desktopUpdateStatus.classList.add("is-good");
+  } else if (["checking", "available", "downloading", "ready"].includes(status.state)) {
+    dom.desktopUpdateStatus.classList.add("is-active");
+  } else if (status.state === "error") {
+    dom.desktopUpdateStatus.classList.add("is-error");
   }
 }
 
@@ -491,6 +597,7 @@ function connectEvents() {
 
   source.addEventListener("error", () => {
     setConnectionStatus("reconnecting", false);
+    showRateLimitedToast("event-source", "connection interrupted. trying to reconnect.", 10000);
   });
 }
 
@@ -514,12 +621,16 @@ async function sendMessage() {
     return;
   }
 
-  await postJson("/api/messages", {
-    channelId: app.currentChannelId,
-    authorId: app.clientId,
-    authorName: app.name,
-    text
-  });
+  try {
+    await postJson("/api/messages", {
+      channelId: app.currentChannelId,
+      authorId: app.clientId,
+      authorName: app.name,
+      text
+    });
+  } catch (error) {
+    showToast(getRequestErrorMessage(error, "message could not be sent."));
+  }
 }
 
 function isMusicCommand(text) {
@@ -545,13 +656,18 @@ async function sendMusicCommand(text) {
       renderMusicBot();
     }
   } catch (error) {
-    showToast("could not run music command.");
+    showToast(getRequestErrorMessage(error, "could not run music command."));
   }
 }
 
 async function loadMessages(channelId) {
-  const messages = await fetchJson(`/api/messages?channelId=${encodeURIComponent(channelId)}`);
-  app.messages.set(channelId, messages);
+  try {
+    const messages = await fetchJson(`/api/messages?channelId=${encodeURIComponent(channelId)}`);
+    app.messages.set(channelId, messages);
+  } catch (error) {
+    app.messages.set(channelId, []);
+    showToast(getRequestErrorMessage(error, "could not load messages."));
+  }
   renderMessages();
 }
 
@@ -575,7 +691,7 @@ async function joinVoice(roomId) {
       video: false
     });
   } catch (error) {
-    showToast("microphone permission was not granted.");
+    showToast(getMediaErrorMessage("microphone", error));
     return;
   }
 
@@ -606,7 +722,7 @@ async function joinVoice(roomId) {
     stopStream(app.micStream);
     app.micStream = null;
     app.currentVoiceId = "";
-    showToast("could not join the voice room.");
+    showToast(getRequestErrorMessage(error, "could not join the voice room."));
     render();
   }
 }
@@ -636,7 +752,11 @@ async function leaveVoice(options = {}) {
   app.muted = false;
 
   if (wasInVoice) {
-    await postJson("/api/voice/leave", { clientId: app.clientId, roomId: previousRoomId });
+    try {
+      await postJson("/api/voice/leave", { clientId: app.clientId, roomId: previousRoomId });
+    } catch (error) {
+      showRateLimitedToast("voice-leave", getRequestErrorMessage(error, "voice leave could not reach the server."), 8000);
+    }
   }
 
   if (wasInVoice && !options.keepNoticeQuiet) {
@@ -662,7 +782,7 @@ async function startCamera() {
       video: getCameraConstraints()
     });
   } catch (error) {
-    showToast("camera permission was not granted.");
+    showToast(getMediaErrorMessage("camera", error));
     return;
   }
 
@@ -742,12 +862,18 @@ async function startScreenShare() {
     addScreenTracks(peer.pc);
   }
 
-  await postJson("/api/screen/state", {
-    clientId: app.clientId,
-    name: app.name,
-    roomId: app.currentVoiceId,
-    active: true
-  });
+  try {
+    await postJson("/api/screen/state", {
+      clientId: app.clientId,
+      name: app.name,
+      roomId: app.currentVoiceId,
+      active: true
+    });
+  } catch (error) {
+    await stopScreenShare({ notifyServer: false });
+    showToast(getRequestErrorMessage(error, "screen sharing could not notify the room."));
+    return;
+  }
   showToast("screen sharing started.");
   renderVoiceControls();
   renderCallIndicators();
@@ -774,12 +900,16 @@ async function stopScreenShare(options = {}) {
   app.screenStream = null;
 
   if (notifyServer && app.currentVoiceId) {
-    await postJson("/api/screen/state", {
-      clientId: app.clientId,
-      name: app.name,
-      roomId: app.currentVoiceId,
-      active: false
-    });
+    try {
+      await postJson("/api/screen/state", {
+        clientId: app.clientId,
+        name: app.name,
+        roomId: app.currentVoiceId,
+        active: false
+      });
+    } catch (error) {
+      showRateLimitedToast("screen-state", getRequestErrorMessage(error, "screen state could not be updated."), 8000);
+    }
   }
 
   renderVoiceControls();
@@ -1608,7 +1738,7 @@ async function selectMicrophone(deviceId) {
     await refreshDevices();
     renderVoiceControls();
   } catch (error) {
-    showToast("could not switch microphone.");
+    showToast(getMediaErrorMessage("microphone", error));
   }
 }
 
@@ -1660,6 +1790,7 @@ async function applyAudioOutput(element) {
     await element.setSinkId(app.selectedSpeakerId || "");
   } catch (error) {
     console.warn("speaker selection failed", error);
+    showRateLimitedToast("speaker-output", "speaker output could not be changed in this browser.", 8000);
   }
 }
 
@@ -1833,16 +1964,22 @@ function getNetworkQualityText({ connected, checking, failed, total }) {
 }
 
 function getScreenShareErrorMessage(error) {
-  if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+  if (!isSecureMediaOrigin()) {
     return "screen sharing needs https or localhost.";
   }
-  if (error?.name === "NotAllowedError") {
-    return "screen sharing permission was not granted.";
+  if (error?.name === "NotAllowedError" || error?.name === "SecurityError") {
+    return "screen sharing was blocked. allow screen capture and try again.";
   }
   if (error?.name === "NotFoundError") {
-    return "no screen source was available.";
+    return "no screen or window was available to share.";
   }
-  return "screen share was cancelled.";
+  if (error?.name === "NotReadableError") {
+    return "the selected screen could not be captured. try a different window or display.";
+  }
+  if (error?.name === "AbortError") {
+    return "screen sharing was cancelled before it started.";
+  }
+  return "screen sharing could not start.";
 }
 
 function getCurrentServer() {
@@ -1905,7 +2042,7 @@ function parseEvent(event) {
 async function fetchJson(url) {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`request failed: ${response.status}`);
+    throw await createRequestError(response);
   }
   return response.json();
 }
@@ -1917,9 +2054,76 @@ async function postJson(url, payload) {
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    throw new Error(`request failed: ${response.status}`);
+    throw await createRequestError(response);
   }
   return response.json();
+}
+
+async function createRequestError(response) {
+  let serverMessage = "";
+  try {
+    const payload = await response.clone().json();
+    serverMessage = String(payload.error || payload.message || "").trim();
+  } catch {
+    try {
+      serverMessage = String(await response.text()).trim();
+    } catch {
+      serverMessage = "";
+    }
+  }
+
+  const error = new Error(serverMessage || `request failed: ${response.status}`);
+  error.status = response.status;
+  error.serverMessage = serverMessage;
+  return error;
+}
+
+function getRequestErrorMessage(error, fallback) {
+  if (navigator.onLine === false) {
+    return "you are offline. reconnect and try again.";
+  }
+  if (error?.serverMessage) {
+    return error.serverMessage.toLowerCase();
+  }
+  if (error?.status === 404) {
+    return "that room or endpoint was not found. refresh and try again.";
+  }
+  if (error?.status === 413) {
+    return "that request is too large.";
+  }
+  if (error?.status >= 500) {
+    return "the server had a problem. try again in a moment.";
+  }
+  if (/failed to fetch|networkerror|load failed/i.test(String(error?.message || ""))) {
+    return "network request failed. check your connection.";
+  }
+  return fallback;
+}
+
+function getMediaErrorMessage(kind, error) {
+  if (!isSecureMediaOrigin()) {
+    return `${kind} needs https or localhost.`;
+  }
+  if (error?.name === "NotAllowedError" || error?.name === "SecurityError") {
+    return `${kind} permission was blocked. allow it in site settings and try again.`;
+  }
+  if (error?.name === "NotFoundError" || error?.name === "DevicesNotFoundError") {
+    return `no ${kind} was found. connect a device and try again.`;
+  }
+  if (error?.name === "NotReadableError" || error?.name === "TrackStartError") {
+    return `${kind} is busy or blocked by another app.`;
+  }
+  if (error?.name === "OverconstrainedError" || error?.name === "ConstraintNotSatisfiedError") {
+    return `${kind} does not support the selected settings. choose another device.`;
+  }
+  if (error?.name === "AbortError") {
+    return `${kind} could not start. unplug and reconnect the device, then try again.`;
+  }
+  return `${kind} could not start. check permissions and device connection.`;
+}
+
+function isSecureMediaOrigin() {
+  return window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
 }
 
 function stopStream(stream) {
@@ -1931,13 +2135,22 @@ function stopStream(stream) {
   }
 }
 
-function showToast(message) {
-  dom.toast.textContent = message;
+function showRateLimitedToast(key, message, delay = 8000) {
+  const lastShown = app.toastHistory.get(key) || 0;
+  if (Date.now() - lastShown < delay) {
+    return;
+  }
+  app.toastHistory.set(key, Date.now());
+  showToast(message);
+}
+
+function showToast(message, options = {}) {
+  dom.toast.textContent = String(message || "something went wrong.").toLowerCase();
   dom.toast.hidden = false;
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => {
     dom.toast.hidden = true;
-  }, 3200);
+  }, options.duration || 3800);
 }
 
 function getClientId() {

@@ -15,8 +15,30 @@
   --brand: #fbecd3;
   --danger: #a95743;
   --shadow: 0 22px 58px rgba(0, 0, 0, 0.32);
-  font-family: "Noto Serif Display", Georgia, "Times New Roman", serif;
+  --app-font-family: "Noto Serif Display", Georgia, "Times New Roman", serif;
+  font-family: var(--app-font-family);
   font-weight: 300;
+}
+
+
+:root[data-font="noto-serif-display"] {
+  --app-font-family: "Noto Serif Display", Georgia, "Times New Roman", serif;
+}
+
+:root[data-font="arial-narrow"] {
+  --app-font-family: "Arial Narrow", "Helvetica Neue Condensed", Arial, sans-serif;
+}
+
+:root[data-font="helvetica"] {
+  --app-font-family: Helvetica, Arial, sans-serif;
+}
+
+:root[data-font="cambria-math"] {
+  --app-font-family: "Cambria Math", Cambria, "Times New Roman", serif;
+}
+
+:root[data-font="monospace"] {
+  --app-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 :root[data-theme="light"] {
@@ -222,7 +244,7 @@ body {
 }
 
 .brand-name {
-  font-family: "Noto Serif Display", Georgia, "Times New Roman", serif;
+  font-family: var(--app-font-family);
   font-weight: 900;
   text-transform: lowercase;
   letter-spacing: 0;
@@ -265,7 +287,8 @@ body {
 
 .room-entry-card,
 .active-rooms-card,
-.color-theme-card {
+.color-theme-card,
+.appearance-card {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: color-mix(in srgb, var(--panel) 94%, transparent);
@@ -324,13 +347,15 @@ body {
 }
 
 .color-theme-card,
-.active-rooms-card {
+.active-rooms-card,
+.appearance-card {
   margin-top: 16px;
   padding: 18px;
 }
 
 .color-theme-heading,
-.active-rooms-heading {
+.active-rooms-heading,
+.appearance-heading {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -338,7 +363,8 @@ body {
 }
 
 .color-theme-heading h2,
-.active-rooms-heading h2 {
+.active-rooms-heading h2,
+.appearance-heading h2 {
   margin: 0;
   font-size: 13px;
   letter-spacing: 0.12em;
@@ -431,6 +457,93 @@ body {
 
 .color-theme-button[data-palette="graphite"] .color-theme-swatch span:last-child {
   background: #a88762;
+}
+
+.font-picker {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.font-picker span {
+  color: var(--quiet);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.font-select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg) 58%, transparent);
+  font-size: 12px;
+  font-weight: 300;
+}
+
+.font-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.app-preferences-strip {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 30%, transparent);
+}
+
+.font-picker.compact {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.font-picker.compact span {
+  white-space: nowrap;
+}
+
+.font-picker.compact .font-select {
+  min-height: 30px;
+  font-size: 11px;
+}
+
+.desktop-update-status {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 9px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 54%, transparent);
+  font-size: 11px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-update-status.is-good {
+  color: var(--bg);
+  border-color: transparent;
+  background: var(--accent-2);
+}
+
+.desktop-update-status.is-active {
+  color: var(--cream);
+  border-color: transparent;
+  background: var(--accent);
+}
+
+.desktop-update-status.is-error {
+  color: var(--cream);
+  border-color: transparent;
+  background: var(--danger);
 }
 
 .active-rooms-list {
@@ -1505,12 +1618,90 @@ button:disabled {
   z-index: 30;
 }
 
+.download-page {
+  min-height: 100vh;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 50% -18%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 28rem),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+}
+
+.download-shell {
+  display: grid;
+  align-content: center;
+  width: min(680px, calc(100% - 32px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 48px 0;
+  text-align: center;
+}
+
+.download-brand {
+  margin: 0 0 10px;
+  color: var(--accent-2);
+  font-size: 22px;
+}
+
+.download-shell h1 {
+  margin: 0;
+  color: var(--brand);
+  font-size: clamp(30px, 6vw, 54px);
+  line-height: 1;
+  font-weight: 300;
+}
+
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.download-button,
+.download-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.download-button {
+  color: var(--cream);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.download-link {
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  border: 1px solid var(--line);
+}
+
+.download-note {
+  width: min(520px, 100%);
+  margin: 18px auto 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.download-note.muted {
+  margin-top: 8px;
+  color: var(--quiet);
+  font-size: 12px;
+}
+
 [hidden] {
   display: none !important;
 }
 
 body * {
-  font-family: "Noto Serif Display", Georgia, "Times New Roman", serif;
+  font-family: var(--app-font-family);
   font-weight: 300;
 }
 
@@ -1540,7 +1731,8 @@ body * {
 
   .room-entry-card,
   .active-rooms-card,
-  .color-theme-card {
+  .color-theme-card,
+  .appearance-card {
     padding: 16px;
     border-radius: 10px;
   }
