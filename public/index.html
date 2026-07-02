@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=13">
+    <link rel="stylesheet" href="/styles.css?v=14">
   </head>
   <body>
     <section id="landingScreen" class="landing-screen" aria-label="room entry">
@@ -177,6 +177,21 @@
               <span id="networkStatus" class="call-pill">network idle</span>
             </div>
           </section>
+          <section id="musicPanel" class="music-panel" aria-label="music bot">
+            <div class="music-copy">
+              <p class="overline">music bot</p>
+              <h2 id="musicTitle">music idle</h2>
+              <span id="musicStatus">ready</span>
+            </div>
+            <div class="music-controls">
+              <button id="musicPauseButton" class="tool-button" type="button" disabled>pause</button>
+              <button id="musicResumeButton" class="tool-button" type="button" disabled>resume</button>
+              <button id="musicStopButton" class="tool-button danger" type="button" disabled>stop</button>
+            </div>
+            <div id="musicPlayerShell" class="music-player-shell" hidden>
+              <iframe id="musicPlayer" title="music bot player" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            </div>
+          </section>
           <div id="stageGrid" class="stage-grid"></div>
         </section>
 
@@ -217,6 +232,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/app.js?v=13" type="module"></script>
+    <script src="/app.js?v=14" type="module"></script>
   </body>
 </html>

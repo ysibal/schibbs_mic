@@ -865,6 +865,74 @@ button:disabled {
   gap: 8px;
 }
 
+.music-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2) 24%, transparent);
+}
+
+.music-copy {
+  min-width: 0;
+}
+
+.music-copy h2 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 300;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-copy span {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.music-controls .tool-button {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.music-player-shell {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #050505;
+  aspect-ratio: 16 / 9;
+  max-height: 180px;
+}
+
+.music-player-shell iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.music-panel:not(.is-active) .music-player-shell {
+  display: none;
+}
+
 .call-pill {
   display: inline-flex;
   align-items: center;
@@ -1564,6 +1632,18 @@ body * {
   .call-indicators {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .music-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .music-controls {
+    justify-content: stretch;
+  }
+
+  .music-controls .tool-button {
+    flex: 1 1 86px;
   }
 
   .call-pill {

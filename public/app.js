@@ -11,6 +11,7 @@ const app = {
   onlineUsers: [],
   voiceRooms: {},
   screenShares: {},
+  musicStates: {},
   eventSource: null,
   lobbyPollTimer: null,
   chatOpen: false,
@@ -37,7 +38,10 @@ const app = {
     qualityTone: "idle",
     networkText: "network idle",
     networkTone: "idle"
-  }
+  },
+  musicPlayerVideoId: "",
+  musicPlayerLoaded: false,
+  pendingMusicState: null
 };
 
 const rtcConfig = {
@@ -89,6 +93,14 @@ const dom = {
   screenStatus: document.querySelector("#screenStatus"),
   qualityStatus: document.querySelector("#qualityStatus"),
   networkStatus: document.querySelector("#networkStatus"),
+  musicPanel: document.querySelector("#musicPanel"),
+  musicTitle: document.querySelector("#musicTitle"),
+  musicStatus: document.querySelector("#musicStatus"),
+  musicPauseButton: document.querySelector("#musicPauseButton"),
+  musicResumeButton: document.querySelector("#musicResumeButton"),
+  musicStopButton: document.querySelector("#musicStopButton"),
+  musicPlayerShell: document.querySelector("#musicPlayerShell"),
+  musicPlayer: document.querySelector("#musicPlayer"),
   memberCount: document.querySelector("#memberCount"),
   memberList: document.querySelector("#memberList"),
   toast: document.querySelector("#toast")
@@ -166,6 +178,16 @@ function bindEvents() {
     await selectCamera(dom.cameraSelect.value);
   });
 
+  dom.musicPauseButton.addEventListener("click", () => sendMusicCommand("!music pause"));
+  dom.musicResumeButton.addEventListener("click", () => sendMusicCommand("!music resume"));
+  dom.musicStopButton.addEventListener("click", () => sendMusicCommand("!music stop"));
+  dom.musicPlayer.addEventListener("load", () => {
+    app.musicPlayerLoaded = true;
+    if (app.pendingMusicState) {
+      applyMusicPlayback(app.pendingMusicState);
+    }
+  });
+
   if (navigator.mediaDevices?.addEventListener) {
     navigator.mediaDevices.addEventListener("devicechange", refreshDevices);
   }
@@ -191,6 +213,7 @@ async function bootstrap() {
   app.voiceRooms = data.voiceRooms || {};
   app.onlineUsers = data.onlineUsers || [];
   app.screenShares = data.screenShares || {};
+  app.musicStates = normalizeMusicStates(data.musicStates || {});
 }
 
 async function enterRoom(roomName) {
@@ -240,6 +263,7 @@ async function returnToLobby() {
   app.currentVoiceId = "";
   app.servers = [];
   app.onlineUsers = [];
+  app.pendingMusicState = null;
   setChatOpen(false);
   dom.entryName.value = "";
   dom.entryRoom.value = "";
@@ -409,9 +433,11 @@ function connectEvents() {
     app.rooms = data.rooms || app.rooms;
     app.voiceRooms = data.voiceRooms || {};
     app.onlineUsers = data.onlineUsers || [];
+    app.musicStates = normalizeMusicStates(data.musicStates || app.musicStates);
     renderLandingRooms();
     renderMembers();
     renderChannels();
+    renderMusicBot();
     renderVoiceStage();
   });
 
@@ -455,6 +481,14 @@ function connectEvents() {
     renderVoiceStage();
   });
 
+  source.addEventListener("music-state", (event) => {
+    const state = withClientReceipt(parseEvent(event));
+    if (state.roomId) {
+      app.musicStates[state.roomId] = state;
+    }
+    renderMusicBot();
+  });
+
   source.addEventListener("error", () => {
     setConnectionStatus("reconnecting", false);
   });
@@ -475,12 +509,44 @@ async function sendMessage() {
   }
 
   dom.messageInput.value = "";
+  if (isMusicCommand(text)) {
+    await sendMusicCommand(text);
+    return;
+  }
+
   await postJson("/api/messages", {
     channelId: app.currentChannelId,
     authorId: app.clientId,
     authorName: app.name,
     text
   });
+}
+
+function isMusicCommand(text) {
+  return /^!music(?:\s|$)/.test(String(text || "").trim().toLowerCase());
+}
+
+async function sendMusicCommand(text) {
+  if (!app.currentRoomId || !app.currentChannelId) {
+    showToast("join a room first.");
+    return;
+  }
+
+  try {
+    const response = await postJson("/api/music", {
+      clientId: app.clientId,
+      name: app.name,
+      roomId: app.currentRoomId,
+      channelId: app.currentChannelId,
+      text
+    });
+    if (response.state?.roomId) {
+      app.musicStates[response.state.roomId] = withClientReceipt(response.state);
+      renderMusicBot();
+    }
+  } catch (error) {
+    showToast("could not run music command.");
+  }
 }
 
 async function loadMessages(channelId) {
@@ -918,6 +984,7 @@ function render() {
   renderChatTab();
   renderDeviceControls();
   renderCallIndicators();
+  renderMusicBot();
 }
 
 function renderChannels() {
@@ -1132,6 +1199,100 @@ function renderChatTab() {
   dom.chatTabButton.classList.toggle("is-active", app.chatOpen);
   dom.chatTabButton.setAttribute("aria-expanded", String(app.chatOpen));
   dom.chatPanel.setAttribute("aria-hidden", String(!app.chatOpen));
+}
+
+function renderMusicBot() {
+  const state = getCurrentMusicState();
+  const isActive = Boolean(state?.active && state.videoId && state.status !== "stopped");
+  dom.musicPanel.classList.toggle("is-active", isActive);
+  dom.musicPauseButton.disabled = !isActive || state.status !== "playing";
+  dom.musicResumeButton.disabled = !isActive || state.status === "playing";
+  dom.musicStopButton.disabled = !isActive;
+
+  if (!isActive) {
+    dom.musicTitle.textContent = "music idle";
+    dom.musicStatus.textContent = "ready";
+    dom.musicPlayerShell.hidden = true;
+    stopMusicPlayer();
+    return;
+  }
+
+  dom.musicTitle.textContent = state.status === "paused" ? "music paused" : "music playing";
+  dom.musicStatus.textContent = `${state.requestedBy || "music bot"} · youtube`;
+  dom.musicPlayerShell.hidden = false;
+  syncMusicPlayer(state);
+}
+
+function getCurrentMusicState() {
+  return app.currentRoomId ? app.musicStates[app.currentRoomId] : null;
+}
+
+function normalizeMusicStates(states) {
+  return Object.fromEntries(
+    Object.entries(states || {}).map(([roomId, state]) => [roomId, withClientReceipt(state)])
+  );
+}
+
+function withClientReceipt(state) {
+  return {
+    ...state,
+    receivedAt: Date.now()
+  };
+}
+
+function syncMusicPlayer(state) {
+  if (!state?.active || !state.videoId) {
+    stopMusicPlayer();
+    return;
+  }
+
+  const position = Math.floor(getMusicPlaybackPosition(state));
+  app.pendingMusicState = state;
+  if (app.musicPlayerVideoId !== state.videoId) {
+    app.musicPlayerVideoId = state.videoId;
+    app.musicPlayerLoaded = false;
+    const autoplay = state.status === "playing" ? "1" : "0";
+    const origin = encodeURIComponent(window.location.origin);
+    dom.musicPlayer.src = `https://www.youtube.com/embed/${state.videoId}?enablejsapi=1&playsinline=1&autoplay=${autoplay}&start=${position}&origin=${origin}`;
+    return;
+  }
+
+  if (app.musicPlayerLoaded) {
+    applyMusicPlayback(state);
+  }
+}
+
+function applyMusicPlayback(state) {
+  const position = Math.floor(getMusicPlaybackPosition(state));
+  sendYouTubeCommand("seekTo", [position, true]);
+  sendYouTubeCommand(state.status === "paused" ? "pauseVideo" : "playVideo");
+}
+
+function stopMusicPlayer() {
+  if (!app.musicPlayerVideoId && !dom.musicPlayer.src) {
+    return;
+  }
+  app.musicPlayerVideoId = "";
+  app.musicPlayerLoaded = false;
+  app.pendingMusicState = null;
+  dom.musicPlayer.removeAttribute("src");
+}
+
+function sendYouTubeCommand(func, args = []) {
+  const target = dom.musicPlayer.contentWindow;
+  if (!target) {
+    return;
+  }
+  target.postMessage(JSON.stringify({ event: "command", func, args }), "https://www.youtube.com");
+}
+
+function getMusicPlaybackPosition(state) {
+  const base = Number(state.position || 0);
+  if (state.status !== "playing") {
+    return base;
+  }
+  const receivedAt = Number(state.receivedAt || Date.now());
+  return Math.max(0, base + (Date.now() - receivedAt) / 1000);
 }
 
 function renderVoiceStage() {

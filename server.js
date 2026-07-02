@@ -14,7 +14,8 @@ const appState = {
   messages: new Map(),
   clients: new Map(),
   voiceRooms: new Map(),
-  screenShares: new Map()
+  screenShares: new Map(),
+  musicStates: new Map()
 };
 
 function createServer() {
@@ -33,7 +34,8 @@ function createServer() {
           servers: getServers(),
           voiceRooms: getVoiceSnapshot(),
           onlineUsers: getOnlineUsers(),
-          screenShares: Object.fromEntries(appState.screenShares)
+          screenShares: Object.fromEntries(appState.screenShares),
+          musicStates: getMusicSnapshot()
         });
         return;
       }
@@ -187,6 +189,26 @@ function createServer() {
         return;
       }
 
+      if (requestUrl.pathname === "/api/music" && req.method === "POST") {
+        const body = await readJson(req);
+        const payload = {
+          clientId: normalizeId(body.clientId),
+          name: normalizeDisplayName(body.name),
+          roomId: normalizeId(body.roomId),
+          channelId: normalizeId(body.channelId),
+          text: normalizeText(body.text, 600)
+        };
+
+        if (!payload.clientId || !appState.rooms.has(payload.roomId) || !channelExists(payload.channelId, "text")) {
+          sendJson(res, { error: "invalid music command" }, 400);
+          return;
+        }
+
+        const result = handleMusicCommand(payload);
+        sendJson(res, result, result.ok ? 200 : 400);
+        return;
+      }
+
       serveStatic(req, res, requestUrl);
     } catch (error) {
       console.error(error);
@@ -238,7 +260,8 @@ function handleEventStream(req, res, requestUrl) {
     rooms: getRoomSnapshot(),
     servers: getServers(),
     voiceRooms: getVoiceSnapshot(),
-    onlineUsers: getOnlineUsers()
+    onlineUsers: getOnlineUsers(),
+    musicStates: getMusicSnapshot()
   });
   broadcastPresence();
   broadcastRooms();
@@ -298,6 +321,11 @@ function broadcastVoiceState() {
 
 function broadcastRooms() {
   broadcast("rooms", { rooms: getRoomSnapshot() });
+}
+
+function broadcastMusicState(roomId) {
+  const state = appState.musicStates.get(roomId) || createStoppedMusicState(roomId);
+  broadcast("music-state", publicMusicState(state), (client) => client.roomId === roomId);
 }
 
 function broadcast(event, payload, predicate = () => true) {
@@ -432,6 +460,221 @@ function getVoiceSnapshot() {
     snapshot[roomId] = [...peers.values()].sort((a, b) => a.joinedAt - b.joinedAt);
   }
   return snapshot;
+}
+
+function getMusicSnapshot() {
+  return Object.fromEntries(
+    [...appState.musicStates.entries()].map(([roomId, state]) => [roomId, publicMusicState(state)])
+  );
+}
+
+function handleMusicCommand(payload) {
+  const parsed = parseMusicCommand(payload.text);
+  if (!parsed) {
+    return { ok: false, error: "invalid music command" };
+  }
+
+  const currentState = appState.musicStates.get(payload.roomId);
+  if (parsed.action === "help") {
+    addBotMessage(payload.channelId, "music commands: !music <youtube link>, !music pause, !music resume, !music stop.");
+    return { ok: true, state: currentState ? publicMusicState(currentState) : createStoppedMusicState(payload.roomId) };
+  }
+
+  if (parsed.action === "play") {
+    if (parsed.url) {
+      const videoId = extractYouTubeVideoId(parsed.url);
+      if (!videoId) {
+        addBotMessage(payload.channelId, "send a valid youtube link.");
+        return { ok: false, error: "invalid youtube link" };
+      }
+
+      const state = {
+        roomId: payload.roomId,
+        active: true,
+        status: "playing",
+        videoId,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        position: 0,
+        startedAt: Date.now(),
+        updatedAt: Date.now(),
+        requestedBy: payload.name
+      };
+      appState.musicStates.set(payload.roomId, state);
+      broadcastMusicState(payload.roomId);
+      addBotMessage(payload.channelId, `${payload.name} started music.`);
+      return { ok: true, state: publicMusicState(state) };
+    }
+
+    if (!currentState?.active) {
+      addBotMessage(payload.channelId, "send a youtube link first.");
+      return { ok: false, error: "missing youtube link" };
+    }
+
+    return resumeMusic(payload, currentState);
+  }
+
+  if (parsed.action === "pause") {
+    if (!currentState?.active) {
+      addBotMessage(payload.channelId, "music is not playing.");
+      return { ok: false, error: "music is not playing" };
+    }
+    const state = {
+      ...currentState,
+      status: "paused",
+      position: getMusicPosition(currentState),
+      updatedAt: Date.now()
+    };
+    appState.musicStates.set(payload.roomId, state);
+    broadcastMusicState(payload.roomId);
+    addBotMessage(payload.channelId, "music paused.");
+    return { ok: true, state: publicMusicState(state) };
+  }
+
+  if (parsed.action === "resume") {
+    if (!currentState?.active) {
+      addBotMessage(payload.channelId, "music is not loaded.");
+      return { ok: false, error: "music is not loaded" };
+    }
+    return resumeMusic(payload, currentState);
+  }
+
+  if (parsed.action === "stop") {
+    const state = createStoppedMusicState(payload.roomId);
+    appState.musicStates.set(payload.roomId, state);
+    broadcastMusicState(payload.roomId);
+    addBotMessage(payload.channelId, "music stopped.");
+    return { ok: true, state: publicMusicState(state) };
+  }
+
+  addBotMessage(payload.channelId, "music commands: !music <youtube link>, !music pause, !music resume, !music stop.");
+  return { ok: true, state: currentState ? publicMusicState(currentState) : createStoppedMusicState(payload.roomId) };
+}
+
+function resumeMusic(payload, currentState) {
+  const state = {
+    ...currentState,
+    active: true,
+    status: "playing",
+    position: currentState.status === "paused" ? currentState.position || 0 : getMusicPosition(currentState),
+    startedAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  appState.musicStates.set(payload.roomId, state);
+  broadcastMusicState(payload.roomId);
+  addBotMessage(payload.channelId, "music resumed.");
+  return { ok: true, state: publicMusicState(state) };
+}
+
+function parseMusicCommand(text) {
+  const parts = String(text || "").trim().split(/\s+/).filter(Boolean);
+  if (parts[0]?.toLowerCase() !== "!music") {
+    return null;
+  }
+
+  const args = parts.slice(1);
+  if (args.length === 0) {
+    return { action: "help" };
+  }
+
+  const first = args[0].toLowerCase();
+  if (first === "pause") {
+    return { action: "pause" };
+  }
+  if (first === "resume" || first === "unpause") {
+    return { action: "resume" };
+  }
+  if (first === "stop" || first === "clear") {
+    return { action: "stop" };
+  }
+  if (first === "help") {
+    return { action: "help" };
+  }
+  if (first === "play") {
+    return { action: "play", url: args.slice(1).join(" ") };
+  }
+  return { action: "play", url: args.join(" ") };
+}
+
+function extractYouTubeVideoId(value) {
+  const text = String(value || "").trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(text)) {
+    return text;
+  }
+
+  try {
+    const parsed = new URL(text);
+    const host = parsed.hostname.replace(/^www\./, "").replace(/^m\./, "");
+    if (host === "youtu.be") {
+      return normalizeYouTubeId(parsed.pathname.split("/").filter(Boolean)[0]);
+    }
+    if (host === "youtube.com" || host === "youtube-nocookie.com") {
+      const watchId = normalizeYouTubeId(parsed.searchParams.get("v"));
+      if (watchId) {
+        return watchId;
+      }
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      const markerIndex = parts.findIndex((part) => ["embed", "shorts", "live"].includes(part));
+      if (markerIndex !== -1) {
+        return normalizeYouTubeId(parts[markerIndex + 1]);
+      }
+    }
+  } catch (error) {
+    return "";
+  }
+  return "";
+}
+
+function normalizeYouTubeId(value) {
+  const match = String(value || "").match(/^[a-zA-Z0-9_-]{11}/);
+  return match ? match[0] : "";
+}
+
+function createStoppedMusicState(roomId) {
+  return {
+    roomId,
+    active: false,
+    status: "stopped",
+    videoId: "",
+    url: "",
+    position: 0,
+    startedAt: 0,
+    updatedAt: Date.now(),
+    requestedBy: "music bot"
+  };
+}
+
+function publicMusicState(state) {
+  return {
+    ...state,
+    serverTime: Date.now()
+  };
+}
+
+function getMusicPosition(state) {
+  if (!state?.active) {
+    return 0;
+  }
+  const base = Number(state.position || 0);
+  if (state.status !== "playing") {
+    return base;
+  }
+  return Math.max(0, base + (Date.now() - Number(state.startedAt || Date.now())) / 1000);
+}
+
+function addBotMessage(channelId, text) {
+  const message = {
+    id: crypto.randomUUID(),
+    channelId,
+    authorId: "music-bot",
+    authorName: "music bot",
+    text,
+    createdAt: new Date().toISOString()
+  };
+  const messages = appState.messages.get(channelId) || [];
+  messages.push(message);
+  appState.messages.set(channelId, messages.slice(-200));
+  broadcast("chat-message", message);
+  return message;
 }
 
 function removeClientFromVoiceRooms(clientId) {
