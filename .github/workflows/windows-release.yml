@@ -30,7 +30,7 @@ jobs:
         run: npm run check
 
       - name: build installer
-        run: npm run desktop:build:win
+        run: npm run desktop:build:win -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
