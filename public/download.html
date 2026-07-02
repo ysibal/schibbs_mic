@@ -9,10 +9,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=15">
+    <link rel="stylesheet" href="/styles.css?v=16">
   </head>
   <body class="download-page">
     <main class="download-shell">
+      <nav class="page-tabs download-tabs" aria-label="main pages">
+        <a class="page-tab" href="/">app</a>
+        <a class="page-tab is-active" href="/download.html">download</a>
+        <a class="page-tab" href="/#about">about</a>
+      </nav>
       <p class="brand-name download-brand">schibb's mic</p>
       <h1>windows app</h1>
       <div class="download-actions">
@@ -21,6 +26,48 @@
       </div>
       <p class="download-note">the app opens https://schibbs-mic.onrender.com and uses the same rooms as the browser version.</p>
       <p class="download-note muted">windows may show a smartscreen warning until the installer is code-signed.</p>
+
+      <section class="version-history" aria-label="version history">
+        <div class="version-heading">
+          <p class="overline">release notes</p>
+          <h2>version history</h2>
+        </div>
+        <article class="version-row">
+          <div>
+            <h3>v0.2.0</h3>
+            <span>desktop distribution update</span>
+          </div>
+          <ul>
+            <li>added desktop auto-update checks through github releases.</li>
+            <li>added the stable installer download named schibbs-mic-setup.exe.</li>
+            <li>added updater assets for installed desktop apps.</li>
+            <li>added clearer microphone, camera, screen sharing, server, and network errors.</li>
+            <li>added local font selection in the lobby and inside rooms.</li>
+          </ul>
+        </article>
+        <article class="version-row">
+          <div>
+            <h3>v0.1.0</h3>
+            <span>first windows installer</span>
+          </div>
+          <ul>
+            <li>added the first github-built windows installer.</li>
+            <li>connected the desktop app to the render-hosted browser app.</li>
+            <li>published the first downloadable release asset.</li>
+          </ul>
+        </article>
+        <article class="version-row">
+          <div>
+            <h3>current app</h3>
+            <span>core room experience</span>
+          </div>
+          <ul>
+            <li>voice rooms, text tab, camera, and screen sharing up to requested 1080p 60fps.</li>
+            <li>youtube music bot commands with play, pause, resume, and stop.</li>
+            <li>light and dark mode, color themes, fullscreen video viewing, and local appearance preferences.</li>
+          </ul>
+        </article>
+      </section>
     </main>
   </body>
 </html>

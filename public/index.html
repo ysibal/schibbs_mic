@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=15">
+    <link rel="stylesheet" href="/styles.css?v=16">
   </head>
   <body>
     <section id="landingScreen" class="landing-screen" aria-label="room entry">
@@ -18,7 +18,12 @@
         <span aria-hidden="true">◐</span>
         <span>light</span>
       </button>
-      <div class="landing-content">
+      <div id="app" class="landing-content">
+        <nav class="page-tabs" aria-label="main pages">
+          <a class="page-tab is-active" href="#app">app</a>
+          <a class="page-tab" href="/download.html">download</a>
+          <a class="page-tab" href="#about">about</a>
+        </nav>
         <div class="lobby-hero">
           <h1 class="brand-name">schibb's mic</h1>
         </div>
@@ -85,6 +90,30 @@
             <h2>active rooms</h2>
           </div>
           <div id="activeRoomsList" class="active-rooms-list"></div>
+        </section>
+
+        <section id="about" class="about-card" aria-label="about schibb's mic">
+          <div class="about-heading">
+            <h2>about</h2>
+          </div>
+          <div class="about-copy">
+            <p>schibb's mic is a browser and windows voice-room app for small rooms, text chat, camera, screen sharing, and shared youtube music playback.</p>
+            <p>the windows app opens the same hosted room system as the browser app, so users can join each other from either place.</p>
+          </div>
+          <div class="about-grid">
+            <article>
+              <h3>rooms</h3>
+              <p>create or join a room with a name, then use voice, text, camera, and screen sharing in one focused space.</p>
+            </article>
+            <article>
+              <h3>desktop</h3>
+              <p>windows users can install the desktop app, receive update checks, and keep using the hosted render service.</p>
+            </article>
+            <article>
+              <h3>preferences</h3>
+              <p>theme, color, and font choices stay local on each device, so no member database is required for them.</p>
+            </article>
+          </div>
         </section>
       </div>
     </section>
