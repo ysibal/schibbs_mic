@@ -31,7 +31,7 @@ after hosting the app online, paste the hosted url into `electron/app-config.cjs
 
 ```js
 module.exports = {
-  hostedAppUrl: "https://your-schibbs-mic.onrender.com"
+  hostedAppUrl: "https://schibbs-mic.onrender.com"
 };
 ```
 
@@ -46,13 +46,13 @@ the generated installer is produced by `electron-builder`. build it on windows o
 you can also test a hosted url without editing the config. this is for development only; set `hostedAppUrl` before building an installer for other users.
 
 ```bash
-SCHIBBS_MIC_URL=https://your-schibbs-mic.onrender.com npm run desktop:dev
+SCHIBBS_MIC_URL=https://schibbs-mic.onrender.com npm run desktop:dev
 ```
 
 on windows powershell:
 
 ```powershell
-$env:SCHIBBS_MIC_URL="https://your-schibbs-mic.onrender.com"; npm run desktop:dev
+$env:SCHIBBS_MIC_URL="https://schibbs-mic.onrender.com"; npm run desktop:dev
 ```
 
 ## host online with render
