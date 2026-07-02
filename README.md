@@ -43,6 +43,26 @@ npm run desktop:build:win
 
 the generated installer is produced by `electron-builder`. build it on windows or a windows ci runner for the smoothest installer output. when `hostedAppUrl` is set before the build, browser users and windows app users connect to the same hosted rooms, chat, voice state, and webrtc signaling server.
 
+## publish the windows installer
+
+the repository includes a github actions workflow that builds the windows installer on a windows runner and publishes it to github releases.
+
+to publish a new downloadable installer:
+
+```bash
+git pull
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+after the workflow finishes, open the releases page:
+
+```text
+https://github.com/ysibal/schibbs_mic/releases
+```
+
+users can download `schibbs-mic-setup-0.1.0.exe`, run it, and use the desktop app. because the installer is not code-signed yet, windows may show a smartscreen warning the first time users run it.
+
 you can also test a hosted url without editing the config. this is for development only; set `hostedAppUrl` before building an installer for other users.
 
 ```bash
