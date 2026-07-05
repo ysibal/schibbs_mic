@@ -1,5 +1,5 @@
 const path = require("path");
-const { app, BrowserWindow, dialog, ipcMain, session, shell } = require("electron");
+const { app, BrowserWindow, desktopCapturer, dialog, ipcMain, session, shell } = require("electron");
 const { startServer } = require("../server");
 const { hostedAppUrl } = require("./app-config.cjs");
 
@@ -54,30 +54,104 @@ async function getAppUrl() {
 }
 
 function configurePermissions(appUrl) {
-  let allowedOrigin = "";
-  try {
-    allowedOrigin = new URL(appUrl).origin;
-  } catch {
-    allowedOrigin = "";
-  }
-
+  const allowedOrigin = getUrlOrigin(appUrl);
+  const appSession = session.defaultSession;
   const allowedPermissions = new Set(["media", "display-capture"]);
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details = {}) => {
+
+  appSession.setPermissionRequestHandler((webContents, permission, callback, details = {}) => {
     if (!allowedPermissions.has(permission)) {
       callback(false);
       return;
     }
 
     const requestUrl = details.requestingUrl || webContents.getURL();
-    let requestOrigin = "";
-    try {
-      requestOrigin = new URL(requestUrl).origin;
-    } catch {
-      requestOrigin = "";
+    callback(isAllowedOrigin(getUrlOrigin(requestUrl), allowedOrigin));
+  });
+
+  if (typeof appSession.setDisplayMediaRequestHandler === "function") {
+    appSession.setDisplayMediaRequestHandler((request, callback) => {
+      handleDisplayMediaRequest(request, callback, allowedOrigin);
+    });
+  }
+}
+
+async function handleDisplayMediaRequest(request, callback, allowedOrigin) {
+  const requestOrigin = getDisplayMediaRequestOrigin(request);
+  if (!isAllowedOrigin(requestOrigin, allowedOrigin)) {
+    cancelDisplayMediaRequest(callback);
+    return;
+  }
+
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ["screen"],
+      thumbnailSize: { width: 0, height: 0 }
+    });
+    const source = await chooseDisplayMediaSource(sources);
+
+    if (!source) {
+      cancelDisplayMediaRequest(callback);
+      return;
     }
 
-    callback(Boolean(allowedOrigin && requestOrigin === allowedOrigin));
+    callback({ video: source });
+  } catch (error) {
+    console.error("display media request failed", error);
+    cancelDisplayMediaRequest(callback);
+  }
+}
+
+function getDisplayMediaRequestOrigin(request) {
+  return getUrlOrigin(request?.securityOrigin) || getUrlOrigin(request?.frame?.url) || getUrlOrigin(currentAppUrl);
+}
+
+async function chooseDisplayMediaSource(sources) {
+  if (!sources.length) {
+    return null;
+  }
+
+  if (sources.length === 1 || !mainWindow) {
+    return sources[0];
+  }
+
+  const choices = sources.slice(0, 10);
+  const buttons = [...choices.map((source, index) => formatDisplaySourceName(source, index)), "cancel"];
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: "question",
+    title: "share screen",
+    message: "choose a screen to share",
+    buttons,
+    defaultId: 0,
+    cancelId: buttons.length - 1,
+    noLink: true
   });
+
+  return choices[result.response] || null;
+}
+
+function formatDisplaySourceName(source, index) {
+  const name = String(source?.name || "").trim();
+  return name ? name.toLowerCase() : `screen ${index + 1}`;
+}
+
+function cancelDisplayMediaRequest(callback) {
+  callback({ video: null, audio: null });
+}
+
+function isAllowedOrigin(requestOrigin, allowedOrigin) {
+  return Boolean(requestOrigin && allowedOrigin && requestOrigin === allowedOrigin);
+}
+
+function getUrlOrigin(value) {
+  if (!value) {
+    return "";
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
 }
 
 async function createWindow() {
