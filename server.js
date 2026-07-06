@@ -8,6 +8,8 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const DEFAULT_PORT = Number(process.env.PORT || 3000);
 const DEFAULT_HOST = process.env.HOST || "0.0.0.0";
 const MAX_BODY_BYTES = 1024 * 128;
+const CLIENT_DISCONNECT_GRACE_MS = 90 * 1000;
+const EVENT_HEARTBEAT_MS = 15 * 1000;
 
 const appState = {
   rooms: new Map(),
@@ -15,7 +17,8 @@ const appState = {
   clients: new Map(),
   voiceRooms: new Map(),
   screenShares: new Map(),
-  musicStates: new Map()
+  musicStates: new Map(),
+  disconnectTimers: new Map()
 };
 
 function createServer() {
@@ -232,10 +235,14 @@ function handleEventStream(req, res, requestUrl) {
   }
 
   const connectionId = crypto.randomUUID();
+  clearClientDisconnectTimer(clientId);
   const previous = appState.clients.get(clientId);
   if (previous?.res && !previous.res.destroyed) {
     previous.res.end();
   }
+
+  req.socket?.setTimeout?.(0);
+  req.socket?.setKeepAlive?.(true);
 
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
@@ -243,7 +250,7 @@ function handleEventStream(req, res, requestUrl) {
     Connection: "keep-alive",
     "X-Accel-Buffering": "no"
   });
-  res.write(": connected\n\n");
+  res.write("retry: 3000\n: connected\n\n");
 
   appState.clients.set(clientId, {
     clientId,
@@ -272,21 +279,48 @@ function handleEventStream(req, res, requestUrl) {
       return;
     }
     res.write(`event: ping\ndata: ${JSON.stringify({ now: Date.now() })}\n\n`);
-  }, 25000);
+  }, EVENT_HEARTBEAT_MS);
 
   req.on("close", () => {
     clearInterval(heartbeat);
     const current = appState.clients.get(clientId);
     if (current?.connectionId === connectionId) {
-      appState.clients.delete(clientId);
-      removeClientFromVoiceRooms(clientId);
-      clearScreenShare(clientId);
-      broadcastPresence();
-      broadcastVoiceState();
-      broadcastRooms();
-      broadcast("screen-state", { clientId, active: false });
+      current.res = null;
+      current.disconnectedAt = Date.now();
+      scheduleClientDisconnectCleanup(clientId, connectionId);
     }
   });
+}
+
+function scheduleClientDisconnectCleanup(clientId, connectionId) {
+  clearClientDisconnectTimer(clientId);
+  const timer = setTimeout(() => {
+    const current = appState.clients.get(clientId);
+    const isReconnected = current?.res && !current.res.destroyed;
+    if (!current || current.connectionId !== connectionId || isReconnected) {
+      return;
+    }
+
+    appState.clients.delete(clientId);
+    appState.disconnectTimers.delete(clientId);
+    removeClientFromVoiceRooms(clientId);
+    clearScreenShare(clientId);
+    broadcastPresence();
+    broadcastVoiceState();
+    broadcastRooms();
+    broadcast("screen-state", { clientId, active: false });
+  }, CLIENT_DISCONNECT_GRACE_MS);
+  appState.disconnectTimers.set(clientId, timer);
+}
+
+function clearClientDisconnectTimer(clientId) {
+  const timer = appState.disconnectTimers.get(clientId);
+  if (!timer) {
+    return;
+  }
+
+  clearTimeout(timer);
+  appState.disconnectTimers.delete(clientId);
 }
 
 function updateClientMetadata(clientId, name, roomId = "") {
@@ -681,6 +715,7 @@ function removeClientFromVoiceRooms(clientId) {
   if (!clientId) {
     return;
   }
+  clearClientDisconnectTimer(clientId);
   for (const [roomId, peers] of appState.voiceRooms.entries()) {
     peers.delete(clientId);
     if (peers.size === 0) {

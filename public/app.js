@@ -13,6 +13,10 @@ const app = {
   screenShares: {},
   musicStates: {},
   eventSource: null,
+  eventReconnectTimer: null,
+  eventWatchdogTimer: null,
+  lastEventAt: 0,
+  voiceRecoveryPending: false,
   lobbyPollTimer: null,
   chatOpen: false,
   micStream: null,
@@ -45,7 +49,8 @@ const app = {
   pendingMusicState: null,
   desktopInfo: null,
   desktopUpdateStatus: null,
-  toastHistory: new Map()
+  toastHistory: new Map(),
+  remoteTrackCleanupTimers: new Map()
 };
 
 const rtcConfig = {
@@ -294,10 +299,7 @@ async function enterRoom(roomName) {
 
 async function returnToLobby() {
   await leaveVoice({ keepNoticeQuiet: true });
-  if (app.eventSource) {
-    app.eventSource.close();
-    app.eventSource = null;
-  }
+  closeEventStream();
   app.currentRoomId = "";
   app.currentServerId = "";
   app.currentChannelId = "";
@@ -540,9 +542,7 @@ function renderDesktopUpdateStatus() {
 }
 
 function connectEvents() {
-  if (app.eventSource) {
-    app.eventSource.close();
-  }
+  closeEventStream({ keepTimers: true });
 
   const params = new URLSearchParams({
     clientId: app.clientId,
@@ -552,12 +552,22 @@ function connectEvents() {
   const source = new EventSource(`/api/events?${params.toString()}`);
   app.eventSource = source;
   setConnectionStatus("connecting", false);
+  markEventStreamAlive();
+  startEventWatchdog();
 
   source.addEventListener("open", () => {
+    markEventStreamAlive();
+    clearEventReconnectTimer();
     setConnectionStatus("live", true);
+    recoverVoiceMembership();
+  });
+
+  source.addEventListener("ping", () => {
+    markEventStreamAlive();
   });
 
   source.addEventListener("hello", (event) => {
+    markEventStreamAlive();
     const data = parseEvent(event);
     app.rooms = data.rooms || app.rooms;
     app.voiceRooms = data.voiceRooms || {};
@@ -571,16 +581,19 @@ function connectEvents() {
   });
 
   source.addEventListener("presence", (event) => {
+    markEventStreamAlive();
     app.onlineUsers = parseEvent(event).onlineUsers || [];
     renderMembers();
   });
 
   source.addEventListener("rooms", (event) => {
+    markEventStreamAlive();
     app.rooms = parseEvent(event).rooms || [];
     renderLandingRooms();
   });
 
   source.addEventListener("voice-state", (event) => {
+    markEventStreamAlive();
     app.voiceRooms = parseEvent(event).rooms || {};
     syncPeerConnections();
     renderChannels();
@@ -588,6 +601,7 @@ function connectEvents() {
   });
 
   source.addEventListener("chat-message", (event) => {
+    markEventStreamAlive();
     const message = parseEvent(event);
     const messages = app.messages.get(message.channelId) || [];
     app.messages.set(message.channelId, [...messages, message].slice(-200));
@@ -597,10 +611,12 @@ function connectEvents() {
   });
 
   source.addEventListener("signal", (event) => {
+    markEventStreamAlive();
     handleSignal(parseEvent(event));
   });
 
   source.addEventListener("screen-state", (event) => {
+    markEventStreamAlive();
     const payload = parseEvent(event);
     if (payload.active) {
       app.screenShares[payload.clientId] = payload;
@@ -611,6 +627,7 @@ function connectEvents() {
   });
 
   source.addEventListener("music-state", (event) => {
+    markEventStreamAlive();
     const state = withClientReceipt(parseEvent(event));
     if (state.roomId) {
       app.musicStates[state.roomId] = state;
@@ -621,7 +638,90 @@ function connectEvents() {
   source.addEventListener("error", () => {
     setConnectionStatus("reconnecting", false);
     showRateLimitedToast("event-source", "connection interrupted. trying to reconnect.", 10000);
+    scheduleEventReconnect();
   });
+}
+
+function markEventStreamAlive() {
+  app.lastEventAt = Date.now();
+}
+
+function startEventWatchdog() {
+  stopEventWatchdog();
+  app.eventWatchdogTimer = setInterval(() => {
+    if (!app.currentRoomId || !app.eventSource) {
+      return;
+    }
+
+    if (Date.now() - app.lastEventAt > 70000) {
+      setConnectionStatus("reconnecting", false);
+      showRateLimitedToast("event-watchdog", "connection stalled. reconnecting.", 10000);
+      connectEvents();
+    }
+  }, 15000);
+}
+
+function stopEventWatchdog() {
+  if (app.eventWatchdogTimer) {
+    clearInterval(app.eventWatchdogTimer);
+    app.eventWatchdogTimer = null;
+  }
+}
+
+function scheduleEventReconnect(delay = 2500) {
+  if (app.eventReconnectTimer || !app.currentRoomId) {
+    return;
+  }
+
+  app.eventReconnectTimer = setTimeout(() => {
+    app.eventReconnectTimer = null;
+    if (app.currentRoomId) {
+      connectEvents();
+    }
+  }, delay);
+}
+
+function clearEventReconnectTimer() {
+  if (app.eventReconnectTimer) {
+    clearTimeout(app.eventReconnectTimer);
+    app.eventReconnectTimer = null;
+  }
+}
+
+function closeEventStream(options = {}) {
+  clearEventReconnectTimer();
+  if (!options.keepTimers) {
+    stopEventWatchdog();
+  }
+  if (app.eventSource) {
+    app.eventSource.close();
+    app.eventSource = null;
+  }
+}
+
+async function recoverVoiceMembership() {
+  if (!app.currentVoiceId || !app.micStream || app.voiceRecoveryPending) {
+    return;
+  }
+
+  app.voiceRecoveryPending = true;
+  try {
+    const response = await postJson("/api/voice/join", {
+      clientId: app.clientId,
+      name: app.name,
+      roomId: app.currentVoiceId
+    });
+    app.voiceRooms[app.currentVoiceId] = [
+      ...(response.peers || []),
+      { clientId: app.clientId, name: app.name, joinedAt: Date.now() }
+    ];
+    await syncPeerConnections();
+    render();
+  } catch (error) {
+    showRateLimitedToast("voice-recover", getRequestErrorMessage(error, "voice could not reconnect. rejoin the voice room."), 10000);
+  } finally {
+    app.voiceRecoveryPending = false;
+  }
 }
 
 async function updatePresence() {
@@ -1133,31 +1233,71 @@ function sendSignal(to, data) {
 function attachRemoteTrack(peerId, track) {
   const media = app.remoteMedia.get(peerId) || {};
   const stream = new MediaStream([track]);
+  const cleanup = () => removeRemoteTrack(peerId, track.kind, track.id);
 
   if (track.kind === "audio") {
     media.audioStreams = media.audioStreams || new Map();
     media.audioStreams.set(track.id, stream);
-    track.addEventListener("ended", () => {
-      const current = app.remoteMedia.get(peerId);
-      current?.audioStreams?.delete(track.id);
-      renderVoiceStage();
-    });
   }
 
   if (track.kind === "video") {
     media.videoStreams = media.videoStreams || new Map();
     media.videoStreams.set(track.id, stream);
-    track.addEventListener("ended", () => {
-      const current = app.remoteMedia.get(peerId);
-      if (current?.videoStreams) {
-        current.videoStreams.delete(track.id);
-      }
-      renderVoiceStage();
-    });
   }
+
+  track.addEventListener("ended", cleanup);
+  track.addEventListener("mute", () => scheduleRemoteTrackCleanup(peerId, track));
+  track.addEventListener("unmute", () => clearRemoteTrackCleanup(peerId, track.id));
 
   app.remoteMedia.set(peerId, media);
   renderVoiceStage();
+}
+
+function scheduleRemoteTrackCleanup(peerId, track) {
+  clearRemoteTrackCleanup(peerId, track.id);
+  const key = getRemoteTrackKey(peerId, track.id);
+  const delay = track.kind === "video" ? 900 : 3000;
+  const timer = setTimeout(() => {
+    app.remoteTrackCleanupTimers.delete(key);
+    if (track.muted || track.readyState === "ended") {
+      removeRemoteTrack(peerId, track.kind, track.id);
+    }
+  }, delay);
+  app.remoteTrackCleanupTimers.set(key, timer);
+}
+
+function clearRemoteTrackCleanup(peerId, trackId) {
+  const key = getRemoteTrackKey(peerId, trackId);
+  const timer = app.remoteTrackCleanupTimers.get(key);
+  if (!timer) {
+    return;
+  }
+
+  clearTimeout(timer);
+  app.remoteTrackCleanupTimers.delete(key);
+}
+
+function removeRemoteTrack(peerId, kind, trackId) {
+  clearRemoteTrackCleanup(peerId, trackId);
+  const media = app.remoteMedia.get(peerId);
+  if (!media) {
+    return;
+  }
+
+  if (kind === "audio") {
+    media.audioStreams?.delete(trackId);
+  }
+  if (kind === "video") {
+    media.videoStreams?.delete(trackId);
+  }
+  if (!media.audioStreams?.size && !media.videoStreams?.size) {
+    app.remoteMedia.delete(peerId);
+  }
+  renderVoiceStage();
+}
+
+function getRemoteTrackKey(peerId, trackId) {
+  return `${peerId}:${trackId}`;
 }
 
 function render() {
@@ -1530,7 +1670,7 @@ function renderVoiceStage() {
 
   for (const peer of peers.filter((item) => item.clientId !== app.clientId)) {
     const media = app.remoteMedia.get(peer.clientId);
-    const videoStreams = [...(media?.videoStreams?.values() || [])];
+    const videoStreams = getActiveRemoteVideoStreams(media);
 
     if (videoStreams.length === 0) {
       dom.stageGrid.append(createParticipantTile(peer, { includeAudio: true }));
@@ -1545,6 +1685,16 @@ function renderVoiceStage() {
       }));
     });
   }
+}
+
+function getActiveRemoteVideoStreams(media) {
+  if (!(media?.videoStreams instanceof Map)) {
+    return [];
+  }
+
+  return [...media.videoStreams.values()].filter((stream) =>
+    stream.getVideoTracks().some((track) => track.readyState !== "ended" && !track.muted)
+  );
 }
 
 function createParticipantTile(peer, options = {}) {
@@ -1596,7 +1746,9 @@ function getRemoteAudioStreams(media) {
     return [];
   }
   if (media.audioStreams instanceof Map) {
-    return [...media.audioStreams.values()];
+    return [...media.audioStreams.values()].filter((stream) =>
+      stream.getAudioTracks().some((track) => track.readyState !== "ended")
+    );
   }
   return media.audioStream ? [media.audioStream] : [];
 }

@@ -61,7 +61,7 @@ after the workflow finishes, open the releases page:
 https://github.com/ysibal/schibbs_mic/releases
 ```
 
-users can download `schibbs-mic-setup.exe` from the latest release, run it, and use the desktop app. versioned installers such as `schibbs-mic-setup-0.2.2.exe` are also attached to each release. because the installer is not code-signed yet, windows may show a smartscreen warning the first time users run it.
+users can download `schibbs-mic-setup.exe` from the latest release, run it, and use the desktop app. versioned installers such as `schibbs-mic-setup-0.2.3.exe` are also attached to each release. because the installer is not code-signed yet, windows may show a smartscreen warning the first time users run it.
 
 there is also a simple hosted download page at:
 
@@ -121,4 +121,6 @@ this version uses peer-to-peer webrtc mesh rooms, which is appropriate for small
 
 the client requests screen capture with `width <= 1920`, `height <= 1080`, and `frameRate <= 60`. users can optionally request computer audio with the screen share. browser support depends on the selected source and operating system; the electron desktop app grants windows loopback audio when the option is selected. the actual delivered quality still depends on the browser, operating system, capture source, cpu, and network conditions.
 
-appearance settings such as theme color, light or dark mode, and font choice are stored only in each user's browser or desktop app with `localStorage`. they do not require server-side user accounts or preference storage.
+appearance settings such as theme color, light or dark mode, screen audio preference, and font choice are stored only in each user's browser or desktop app with `localStorage`. they do not require server-side user accounts or preference storage.
+
+server-sent event disconnects are kept in a short grace window so transient render/browser network drops can reconnect without forcing users to refresh or manually rejoin voice.

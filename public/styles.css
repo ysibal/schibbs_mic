@@ -223,8 +223,9 @@ body {
 }
 
 .landing-screen {
-  min-height: 100vh;
-  overflow: auto;
+  height: 100vh;
+  min-height: 0;
+  overflow-y: auto;
   padding: 34px 22px;
   background:
     radial-gradient(circle at 50% -12%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 20rem),
@@ -234,6 +235,13 @@ body {
 .landing-content {
   width: min(720px, 100%);
   margin: 0 auto;
+  padding-bottom: 34px;
+}
+
+@supports (height: 100dvh) {
+  .landing-screen {
+    height: 100dvh;
+  }
 }
 
 .page-tabs {
