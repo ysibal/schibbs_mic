@@ -1,6 +1,6 @@
 {
   "name": "schibbs-mic",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "a browser and windows desktop voice, camera, chat, room, and screen sharing app.",
   "main": "electron/main.cjs",

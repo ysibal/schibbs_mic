@@ -18,6 +18,7 @@ const app = {
   micStream: null,
   cameraStream: null,
   screenStream: null,
+  shareScreenAudio: false,
   peers: new Map(),
   remoteMedia: new Map(),
   muted: false,
@@ -96,6 +97,7 @@ const dom = {
   cameraSelect: document.querySelector("#cameraSelect"),
   micStatus: document.querySelector("#micStatus"),
   screenStatus: document.querySelector("#screenStatus"),
+  screenAudioToggle: document.querySelector("#screenAudioToggle"),
   qualityStatus: document.querySelector("#qualityStatus"),
   networkStatus: document.querySelector("#networkStatus"),
   musicPanel: document.querySelector("#musicPanel"),
@@ -177,6 +179,13 @@ function bindEvents() {
       stopCamera();
     } else {
       await startCamera();
+    }
+  });
+
+  dom.screenAudioToggle?.addEventListener("change", () => {
+    setScreenAudioPreference(dom.screenAudioToggle.checked);
+    if (app.screenStream) {
+      showToast("stop sharing and start again to change screen audio.");
     }
   });
 
@@ -396,6 +405,7 @@ function mergeRoom(rooms, room) {
 function initAppearance() {
   initTheme();
   initFont();
+  initScreenAudioPreference();
 }
 
 function initTheme() {
@@ -410,6 +420,19 @@ function initTheme() {
 function initFont() {
   const savedFont = localStorage.getItem("schibbs-mic-font");
   applyFont(fontOptions.has(savedFont) ? savedFont : "noto-serif-display");
+}
+
+function initScreenAudioPreference() {
+  setScreenAudioPreference(localStorage.getItem("schibbs-mic-screen-audio") === "true");
+}
+
+function setScreenAudioPreference(isEnabled) {
+  app.shareScreenAudio = Boolean(isEnabled);
+  localStorage.setItem("schibbs-mic-screen-audio", String(app.shareScreenAudio));
+  if (dom.screenAudioToggle) {
+    dom.screenAudioToggle.checked = app.shareScreenAudio;
+  }
+  renderVoiceControls();
 }
 
 function toggleTheme() {
@@ -837,14 +860,7 @@ async function startScreenShare() {
   }
 
   try {
-    app.screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: {
-        width: { max: 1920 },
-        height: { max: 1080 },
-        frameRate: { max: 60 }
-      },
-      audio: false
-    });
+    app.screenStream = await navigator.mediaDevices.getDisplayMedia(getScreenCaptureConstraints());
   } catch (error) {
     showToast(getScreenShareErrorMessage(error));
     return;
@@ -855,6 +871,13 @@ async function startScreenShare() {
     screenTrack.contentHint = "detail";
     screenTrack.addEventListener("ended", () => {
       stopScreenShare();
+    });
+  }
+
+  for (const audioTrack of app.screenStream.getAudioTracks()) {
+    audioTrack.contentHint = "music";
+    audioTrack.addEventListener("ended", () => {
+      renderCallIndicators();
     });
   }
 
@@ -874,10 +897,35 @@ async function startScreenShare() {
     showToast(getRequestErrorMessage(error, "screen sharing could not notify the room."));
     return;
   }
-  showToast("screen sharing started.");
+  showToast(getScreenShareStartedMessage());
   renderVoiceControls();
   renderCallIndicators();
   renderVoiceStage();
+}
+
+function getScreenCaptureConstraints() {
+  return {
+    video: {
+      width: { max: 1920 },
+      height: { max: 1080 },
+      frameRate: { max: 60 }
+    },
+    audio: app.shareScreenAudio
+  };
+}
+
+function getScreenShareStartedMessage() {
+  if (hasActiveScreenAudio()) {
+    return "screen sharing with audio started.";
+  }
+  if (app.shareScreenAudio) {
+    return "screen sharing started without audio. this source may not support audio.";
+  }
+  return "screen sharing started.";
+}
+
+function hasActiveScreenAudio() {
+  return Boolean(app.screenStream?.getAudioTracks().some((track) => track.readyState !== "ended"));
 }
 
 async function stopScreenShare(options = {}) {
@@ -1082,12 +1130,20 @@ function sendSignal(to, data) {
   });
 }
 
-function attachRemoteTrack(peerId, track, streams = []) {
+function attachRemoteTrack(peerId, track) {
   const media = app.remoteMedia.get(peerId) || {};
-  const stream = streams[0] || new MediaStream([track]);
+  const stream = new MediaStream([track]);
+
   if (track.kind === "audio") {
-    media.audioStream = stream;
+    media.audioStreams = media.audioStreams || new Map();
+    media.audioStreams.set(track.id, stream);
+    track.addEventListener("ended", () => {
+      const current = app.remoteMedia.get(peerId);
+      current?.audioStreams?.delete(track.id);
+      renderVoiceStage();
+    });
   }
+
   if (track.kind === "video") {
     media.videoStreams = media.videoStreams || new Map();
     media.videoStreams.set(track.id, stream);
@@ -1099,6 +1155,7 @@ function attachRemoteTrack(peerId, track, streams = []) {
       renderVoiceStage();
     });
   }
+
   app.remoteMedia.set(peerId, media);
   renderVoiceStage();
 }
@@ -1258,6 +1315,17 @@ function renderVoiceControls() {
   dom.leaveVoiceButton.disabled = !inVoice;
   dom.cameraButton.classList.toggle("is-active", Boolean(app.cameraStream));
   dom.shareButton.classList.toggle("is-active", Boolean(app.screenStream));
+  dom.shareButton.title = app.screenStream
+    ? "stop sharing screen"
+    : app.shareScreenAudio
+      ? "share screen with computer audio"
+      : "share screen";
+  if (dom.screenAudioToggle) {
+    dom.screenAudioToggle.disabled = Boolean(app.screenStream);
+    const toggleLabel = dom.screenAudioToggle.closest(".screen-audio-toggle");
+    toggleLabel?.classList.toggle("is-disabled", Boolean(app.screenStream));
+    toggleLabel?.setAttribute("title", app.screenStream ? "stop sharing to change screen audio" : "share computer audio with screen share");
+  }
   muteLabel.textContent = app.muted ? "unmute mic" : "mute mic";
   muteHelper.textContent = app.muted ? "mic is off" : "mic is on";
   dom.cameraButton.querySelector("span:last-child").textContent = app.cameraStream
@@ -1299,7 +1367,8 @@ function renderScreenStatus() {
   const settings = track?.getSettings?.() || {};
   const size = settings.width && settings.height ? `${settings.width}x${settings.height}` : "screen";
   const frameRate = settings.frameRate ? ` · ${Math.round(settings.frameRate)} fps` : "";
-  setPill(dom.screenStatus, `sharing ${size}${frameRate}`, "good");
+  const audio = hasActiveScreenAudio() ? " · audio" : "";
+  setPill(dom.screenStatus, `sharing ${size}${frameRate}${audio}`, "good");
 }
 
 function renderQualityStatus() {
@@ -1502,12 +1571,14 @@ function createParticipantTile(peer, options = {}) {
     tile.append(initial);
   }
 
-  if (!isLocal && options.includeAudio !== false && media?.audioStream) {
-    const audio = document.createElement("audio");
-    audio.autoplay = true;
-    audio.srcObject = media.audioStream;
-    applyAudioOutput(audio);
-    tile.append(audio);
+  if (!isLocal && options.includeAudio !== false) {
+    for (const audioStream of getRemoteAudioStreams(media)) {
+      const audio = document.createElement("audio");
+      audio.autoplay = true;
+      audio.srcObject = audioStream;
+      applyAudioOutput(audio);
+      tile.append(audio);
+    }
   }
 
   const label = document.createElement("div");
@@ -1518,6 +1589,16 @@ function createParticipantTile(peer, options = {}) {
   tile.append(label);
 
   return tile;
+}
+
+function getRemoteAudioStreams(media) {
+  if (!media) {
+    return [];
+  }
+  if (media.audioStreams instanceof Map) {
+    return [...media.audioStreams.values()];
+  }
+  return media.audioStream ? [media.audioStream] : [];
 }
 
 function createFullscreenButton(tile, video) {
@@ -1711,6 +1792,7 @@ async function selectMicrophone(deviceId) {
       video: false
     });
     const [nextTrack] = nextStream.getAudioTracks();
+    const previousMicTracks = new Set(app.micStream?.getAudioTracks() || []);
     if (!nextTrack) {
       stopStream(nextStream);
       showToast("microphone was not available.");
@@ -1721,7 +1803,7 @@ async function selectMicrophone(deviceId) {
     for (const peer of app.peers.values()) {
       let replaced = false;
       for (const sender of peer.pc.getSenders()) {
-        if (sender.track?.kind === "audio") {
+        if (sender.track && previousMicTracks.has(sender.track)) {
           await sender.replaceTrack(nextTrack);
           replaced = true;
         }

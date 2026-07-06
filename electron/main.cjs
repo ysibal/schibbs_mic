@@ -94,11 +94,19 @@ async function handleDisplayMediaRequest(request, callback, allowedOrigin) {
       return;
     }
 
-    callback({ video: source });
+    callback({ video: source, ...getDisplayMediaAudioGrant(request) });
   } catch (error) {
     console.error("display media request failed", error);
     cancelDisplayMediaRequest(callback);
   }
+}
+
+function getDisplayMediaAudioGrant(request) {
+  if (!request?.audioRequested || process.platform !== "win32") {
+    return {};
+  }
+
+  return { audio: "loopback" };
 }
 
 function getDisplayMediaRequestOrigin(request) {

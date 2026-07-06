@@ -1,6 +1,6 @@
 # schibb's mic
 
-schibb's mic is an app scaffold that runs in the browser and can be wrapped as a windows desktop app with electron. it starts with a room lobby that asks for a username and room name every visit, lists active rooms, and then opens text chat, voice, camera video, and screen sharing requested at a maximum of 1920x1080 and 60fps.
+schibb's mic is an app scaffold that runs in the browser and can be wrapped as a windows desktop app with electron. it starts with a room lobby that asks for a username and room name every visit, lists active rooms, and then opens text chat, voice, camera video, and screen sharing requested at a maximum of 1920x1080 and 60fps with optional computer audio when supported.
 
 ## run in a browser
 
@@ -61,7 +61,7 @@ after the workflow finishes, open the releases page:
 https://github.com/ysibal/schibbs_mic/releases
 ```
 
-users can download `schibbs-mic-setup.exe` from the latest release, run it, and use the desktop app. versioned installers such as `schibbs-mic-setup-0.2.0.exe` are also attached to each release. because the installer is not code-signed yet, windows may show a smartscreen warning the first time users run it.
+users can download `schibbs-mic-setup.exe` from the latest release, run it, and use the desktop app. versioned installers such as `schibbs-mic-setup-0.2.2.exe` are also attached to each release. because the installer is not code-signed yet, windows may show a smartscreen warning the first time users run it.
 
 there is also a simple hosted download page at:
 
@@ -119,6 +119,6 @@ this version uses peer-to-peer webrtc mesh rooms, which is appropriate for small
 - persistent auth, users, servers, channels, and message storage.
 - https and secure deployment for browser media permissions.
 
-the client requests screen capture with `width <= 1920`, `height <= 1080`, and `frameRate <= 60`. the actual delivered quality still depends on the browser, operating system, capture source, cpu, and network conditions.
+the client requests screen capture with `width <= 1920`, `height <= 1080`, and `frameRate <= 60`. users can optionally request computer audio with the screen share. browser support depends on the selected source and operating system; the electron desktop app grants windows loopback audio when the option is selected. the actual delivered quality still depends on the browser, operating system, capture source, cpu, and network conditions.
 
 appearance settings such as theme color, light or dark mode, and font choice are stored only in each user's browser or desktop app with `localStorage`. they do not require server-side user accounts or preference storage.

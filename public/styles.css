@@ -1060,6 +1060,32 @@ button:disabled {
   opacity: 0.62;
 }
 
+.screen-audio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg) 42%, transparent);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.screen-audio-toggle input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.screen-audio-toggle.is-disabled {
+  opacity: 0.62;
+}
+
 .call-indicators {
   display: flex;
   flex-wrap: wrap;
@@ -1982,6 +2008,11 @@ body * {
 
   .device-controls {
     grid-template-columns: 1fr;
+  }
+
+  .screen-audio-toggle {
+    width: 100%;
+    justify-content: center;
   }
 
   .call-indicators {
